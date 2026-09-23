@@ -1,8 +1,18 @@
 import { CATEGORIES, SIZES } from './cards';
 import { emptyGame } from './game';
-import type { Category, Game, Score, Settings } from '../types';
+import type { Book, BookFilter, CardRow, Category, Game, Score, Settings } from '../types';
+import { validateBookFilter } from './books';
 
 const prefsKey = 'cahier-coreen:prefs';
+const bookFilterKey = 'haru:library:book';
+export function loadBookFilter(books: Book[] | null, rows: CardRow[]): BookFilter {
+  try { return validateBookFilter(JSON.parse(localStorage.getItem(bookFilterKey) ?? 'null'), books, rows); }
+  catch { return 'all'; }
+}
+export function saveBookFilter(filter: BookFilter) {
+  try { localStorage.setItem(bookFilterKey, JSON.stringify(filter)); }
+  catch { /* Filtering remains usable when browser storage is unavailable. */ }
+}
 const gameKey = (userId: string) => `haru:game:${userId}`;
 const isObject = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object';
 const nonNegative = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value >= 0;

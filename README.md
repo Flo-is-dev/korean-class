@@ -41,12 +41,22 @@ cartes restent dans le même projet Supabase, avec les mêmes règles RLS.
 ## Fonctionnalités conservées
 
 - Mode clair, design responsive, mascotte tigre et sons désactivables.
+- Section Réglages : polices coréennes Standard, Carrée et Manuscrite avec
+  aperçus, et mode sombre. Application locale avant le premier rendu, puis
+  lecture de `user_settings` après connexion (les valeurs serveur font foi).
+  Une ligne absente utilise Standard et le thème clair. Les changements sont
+  sauvegardés après 500 ms ; un échec affiche « Réglage non synchronisé »
+  sans annuler le choix. Sur la page de connexion, seul le cache local est utilisé.
 - Entraînement : catégories, flashcards, saisie en hangul, raccourcis clavier,
   variantes de réponses et révision des erreurs.
 - Chrono : 10, 20 ou 50 mots tirés au sort dans une catégorie, ou sélection
   manuelle. Les doublons identiques sont regroupés dans les quiz.
 - Bibliothèque : catalogue complet paginé côté API, recherche français/coréen,
-  filtres, sélection multiple persistante entre les onglets.
+  filtres, sélection multiple persistante entre les onglets. Le filtre Livre
+  utilise le catalogue Supabase `books`, trié par `sort_order`, avec des compteurs
+  tenant compte de la recherche et de la catégorie. Son choix est mémorisé dans
+  le navigateur ; un livre supprimé revient à « Tous les livres ». Si le catalogue
+  ne peut pas être chargé, le filtre est masqué et l’erreur est journalisée en console.
 - Suppression multiple : réservée aux administrateurs, après confirmation.
   Elle affecte le catalogue partagé et la progression associée de tous les
   utilisateurs. Les droits sont également contrôlés par Supabase.

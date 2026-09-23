@@ -4,9 +4,10 @@ import type { Session } from '@supabase/supabase-js';
 import App from './App';
 
 const auth = vi.hoisted(() => ({ getSession: vi.fn(), onAuthStateChange: vi.fn(), signInWithPassword: vi.fn(), signUp: vi.fn(), signInWithOAuth: vi.fn(), signOut: vi.fn() }));
-const api = vi.hoisted(() => ({ loadCards: vi.fn(), loadStats: vi.fn(), isAdmin: vi.fn(), saveProgress: vi.fn(), deleteCards: vi.fn() }));
+const api = vi.hoisted(() => ({ loadBooks: vi.fn(), loadCards: vi.fn(), loadStats: vi.fn(), isAdmin: vi.fn(), saveProgress: vi.fn(), deleteCards: vi.fn() }));
 vi.mock('./lib/supabase', () => ({ ...api, supabase: { auth }, errorMessage: (error: Error) => error.message }));
 vi.mock('./lib/sound', () => ({ playSound: vi.fn() }));
+vi.mock('./lib/appearance-api', () => ({ loadAppearance: vi.fn().mockResolvedValue({ ko_font: 'standard', theme: 'light' }), saveAppearance: vi.fn().mockResolvedValue(undefined) }));
 let notify: (event: string, session: Session | null) => void;
 const unsubscribe = vi.fn();
 beforeEach(() => {
@@ -15,10 +16,23 @@ beforeEach(() => {
   auth.signInWithPassword.mockReset().mockResolvedValue({ error: null });
   auth.signUp.mockReset().mockResolvedValue({ data: { session: null }, error: null });
   auth.signInWithOAuth.mockReset().mockResolvedValue({ error: null });
+  api.loadBooks.mockReset().mockResolvedValue([]);
   api.loadCards.mockReset().mockResolvedValue([]); api.loadStats.mockReset().mockResolvedValue({}); api.isAdmin.mockReset().mockResolvedValue(false);
   api.saveProgress.mockReset().mockResolvedValue(undefined);
 });
 describe('authentication and account lifecycle', () => {
+  it('logs a books loading failure without blocking the word list', async () => {
+    const failure = new Error('books unavailable');
+    api.loadBooks.mockRejectedValueOnce(failure);
+    const logger = vi.spyOn(console, 'error').mockImplementation(() => {});
+    auth.getSession.mockResolvedValue({ data: { session: { user: { id: 'first', email: 'first@example.test' } } }, error: null });
+    render(<App />);
+    await screen.findByRole('navigation');
+    fireEvent.click(screen.getByRole('button', { name: 'Mes mots' }));
+    expect(screen.queryByLabelText('Livre')).toBeNull();
+    expect(screen.getByRole('searchbox')).toBeDefined();
+    expect(logger).toHaveBeenCalledWith('Chargement des livres impossible :', failure);
+  });
   it('submits login, handles confirmation errors and allows retry', async () => {
     auth.signInWithPassword.mockResolvedValueOnce({ error: { message: 'Email not confirmed' } });
     render(<App />);

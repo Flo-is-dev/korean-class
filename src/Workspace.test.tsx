@@ -14,7 +14,7 @@ const rows: CardRow[] = [
   { id: '3', category: 'vocab', word_type: null, ko: '학교', fr: 'École', book: null, lesson: null, short_form: null },
   { id: '4', category: 'vocab', word_type: 'verb', ko: '먹다', fr: 'Manger', book: null, lesson: null, short_form: null },
 ];
-function setup(admin = true) { return render(<StrictMode><Workspace user={{ id: 'test-user', email: 'test@example.test' } as User} initialRows={rows} initialStats={{}} admin={admin} /></StrictMode>); }
+function setup(admin = true) { return render(<StrictMode><Workspace user={{ id: 'test-user', email: 'test@example.test' } as User} books={[]} initialRows={rows} initialStats={{}} admin={admin} /></StrictMode>); }
 function go(name: string) { fireEvent.click(within(screen.getByRole('navigation')).getByRole('button', { name })); }
 beforeEach(() => { api.deleteCards.mockReset().mockResolvedValue(['1', '4']); api.saveProgress.mockReset().mockResolvedValue(undefined); vi.spyOn(window, 'confirm').mockReturnValue(true); });
 describe('React workspace', () => {

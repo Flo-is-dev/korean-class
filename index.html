@@ -1,7 +1,21 @@
 <!doctype html>
-<html lang="fr" data-theme="light">
+<html lang="fr" data-theme="light" data-ko-font="standard">
   <head>
     <meta charset="utf-8" />
+    <script>
+      (() => {
+        let saved = {};
+        try { saved = JSON.parse(localStorage.getItem('cahier-coreen:settings') || '{}') || {}; } catch (_) {}
+        const root = document.documentElement;
+        root.dataset.theme = saved.theme === 'dark' ? 'dark' : 'light';
+        root.dataset.koFont = ['standard', 'square', 'handwritten'].includes(saved.ko_font) ? saved.ko_font : 'standard';
+        root.style.colorScheme = root.dataset.theme;
+      })();
+    </script>
+    <style>
+      :root { --bg: #f7f9f5; --ink: #27362d; background: var(--bg); color: var(--ink); }
+      :root[data-theme="dark"] { --bg: #141c18; --ink: #edf4ec; }
+    </style>
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover"
@@ -11,7 +25,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Do+Hyeon:wght@400&family=IBM+Plex+Sans+KR:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&family=Nanum+Pen+Script:wght@400&family=Noto+Sans+KR:wght@400;700&display=swap"
     />
     <script type="module" src="/src/main.tsx"></script>
   </head>

@@ -1,6 +1,6 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
-import type { Card, CardRow, Category, Game, LibraryFilters, Page, QuizResult, QuizRun, Settings, Stats } from './types';
+import type { Book, Card, CardRow, Category, Game, LibraryFilters, Page, QuizResult, QuizRun, Settings, Stats } from './types';
 import { Header } from './components/Header';
 import { LearnPage } from './pages/LearnPage';
 import { ChronoPage } from './pages/ChronoPage';
@@ -8,8 +8,9 @@ import { LibraryPage } from './pages/LibraryPage';
 import { ScoresPage } from './pages/ScoresPage';
 import { QuizPage } from './pages/QuizPage';
 import { ResultPage } from './pages/ResultPage';
+import { validateBookFilter } from './lib/books';
 import { buildCards, isError } from './lib/cards';
-import { loadGame, loadSettings, saveGame, saveSettings } from './lib/storage';
+import { loadBookFilter, loadGame, loadSettings, saveBookFilter, saveGame, saveSettings } from './lib/storage';
 import { rewardSession, streakDays, today } from './lib/game';
 import { deleteCards, errorMessage, supabase } from './lib/supabase';
 import { playSound } from './lib/sound';
@@ -17,7 +18,7 @@ import { useProgress } from './hooks/useProgress';
 
 const pages: [Page, string, string][] = [['learn', '✦', 'Apprendre'], ['chrono', '◷', 'Chrono'], ['words', '▤', 'Mes mots'], ['scores', '♜', 'Scores']];
 
-export function Workspace({ user, initialRows, initialStats, admin }: { user: User; initialRows: CardRow[]; initialStats: Stats; admin: boolean }) {
+export function Workspace({ user, initialRows, initialStats, admin, books }: { books: Book[] | null; user: User; initialRows: CardRow[]; initialStats: Stats; admin: boolean }) {
   const [rows, setRows] = useState(initialRows);
   const cards = useMemo(() => buildCards(rows), [rows]);
   const progress = useProgress(user.id, initialStats);
@@ -31,7 +32,15 @@ export function Workspace({ user, initialRows, initialStats, admin }: { user: Us
   const [result, setResult] = useState<{ result: QuizResult; reward: string } | null>(null);
   const [chronoCategory, setChronoCategory] = useState<Category>('verbs');
   const [chronoSize, setChronoSize] = useState(20);
-  const [library, setLibrary] = useState<LibraryFilters>({ query: '', cat: 'all', selected: new Set() });
+  const [library, setLibrary] = useState<LibraryFilters>(() => ({ query: '', cat: 'all', book: loadBookFilter(books, initialRows), selected: new Set() }));
+  useEffect(() => {
+    if (books === null) return;
+    const book = validateBookFilter(library.book, books, rows);
+    if (book !== library.book) {
+      setLibrary(current => ({ ...current, book }));
+      saveBookFilter(book);
+    }
+  }, [books, rows, library.book]);
   const sequence = useRef(0);
   const awarded = useRef(new Set<number>());
 
@@ -96,8 +105,8 @@ export function Workspace({ user, initialRows, initialStats, admin }: { user: Us
     <main id="view">
       {run ? <QuizPage key={run.id} run={run} onAnswer={(id, ok) => { playSound(ok ? 'correct' : 'wrong', game.sound); return progress.record(id, ok); }} onOverride={(id, previous) => { progress.override(id, previous); playSound('correct', game.sound); }} onFinish={finish} /> : result ? <ResultPage {...result} onRetry={selected => start(selected)} onLearn={() => navigate('learn')} onScores={() => navigate('scores')} /> : <>
         {page === 'learn' && <LearnPage cards={cards} settings={settings} stats={progress.stats} onSettings={changeSettings} onStart={selected => start(selected)} />}
-        {page === 'chrono' && <ChronoPage cards={cards} category={chronoCategory} size={chronoSize} onCategory={setChronoCategory} onSize={setChronoSize} onStart={selected => start(selected, true)} onChoose={() => { setLibrary({ query: '', cat: chronoCategory, selected: new Set() }); navigate('words'); }} />}
-        {page === 'words' && <LibraryPage rows={rows} filters={library} admin={admin} busy={busy} onFilters={next => { if (!busyRef.current) setLibrary(next); }} onStart={selected => start(selected, true, true)} onDelete={ids => void remove(ids)} />}
+        {page === 'chrono' && <ChronoPage cards={cards} category={chronoCategory} size={chronoSize} onCategory={setChronoCategory} onSize={setChronoSize} onStart={selected => start(selected, true)} onChoose={() => { setLibrary(current => ({ ...current, query: '', cat: chronoCategory, selected: new Set() })); navigate('words'); }} />}
+        {page === 'words' && <LibraryPage books={books} rows={rows} filters={library} admin={admin} busy={busy} onFilters={next => { if (!busyRef.current) { setLibrary(next); if (next.book !== library.book) saveBookFilter(next.book); } }} onStart={selected => start(selected, true, true)} onDelete={ids => void remove(ids)} />}
         {page === 'scores' && <ScoresPage game={game} onChallenge={() => navigate('chrono')} />}
       </>}
     </main>

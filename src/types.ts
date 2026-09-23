@@ -1,6 +1,8 @@
 export type Category = 'vocab' | 'verbs' | 'adjectives' | 'colors' | 'numbers' | 'classifiers' | 'interrogatives' | 'grammar';
 export type Mode = 'flash' | 'type';
 export type Page = 'learn' | 'chrono' | 'words' | 'scores';
+export interface Book { code: string; label: string }
+export type BookFilter = 'all' | 'none' | `book:${string}`;
 export interface CardRow {
   id: string;
   category: Exclude<Category, 'verbs' | 'adjectives'>;
@@ -40,4 +42,4 @@ export interface Game { xp: number; days: string[]; scores: Score[]; sound: bool
 export interface QuizRun { id: number; cards: Card[]; mode: Mode; timed: boolean; custom: boolean }
 export interface Answer { card: Card; ok: boolean; typed?: string }
 export interface QuizResult { run: QuizRun; answers: Answer[]; seconds: number; completed: boolean }
-export interface LibraryFilters { query: string; cat: Category | 'all'; selected: Set<string> }
+export interface LibraryFilters { query: string; cat: Category | 'all'; book: BookFilter; selected: Set<string> }

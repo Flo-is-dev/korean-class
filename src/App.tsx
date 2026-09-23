@@ -1,24 +1,29 @@
 import { useEffect, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
-import type { CardRow, Stats } from './types';
+import type { Book, CardRow, Stats } from './types';
 import { Header } from './components/Header';
+import { AppearanceProvider, AppearanceSettings } from './components/AppearanceSettings';
 import { AuthPage } from './pages/AuthPage';
 import { Workspace } from './Workspace';
-import { errorMessage, isAdmin, loadCards, loadStats, supabase } from './lib/supabase';
+import { errorMessage, isAdmin, loadBooks, loadCards, loadStats, supabase } from './lib/supabase';
 
 function UserWorkspace({ user }: { user: User }) {
-  const [data, setData] = useState<{ rows: CardRow[]; stats: Stats; admin: boolean } | null>(null);
+  const [data, setData] = useState<{ rows: CardRow[]; stats: Stats; admin: boolean; books: Book[] | null } | null>(null);
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let active = true;
     setError('');
-    void Promise.all([loadCards(), loadStats(user.id), isAdmin(user.id)]).then(([rows, stats, admin]) => {
-      if (active) setData({ rows, stats, admin });
+    const booksRequest = loadBooks().catch(failure => {
+      console.error('Chargement des livres impossible :', failure);
+      return null;
+    });
+    void Promise.all([loadCards(), loadStats(user.id), isAdmin(user.id), booksRequest]).then(([rows, stats, admin, books]) => {
+      if (active) setData({ rows, stats, admin, books });
     }).catch(failure => { if (active) setError(errorMessage(failure)); });
     return () => { active = false; };
   }, [user.id, attempt]);
-  if (data) return <Workspace user={user} initialRows={data.rows} initialStats={data.stats} admin={data.admin} />;
+  if (data) return <Workspace user={user} initialRows={data.rows} initialStats={data.stats} admin={data.admin} books={data.books} />;
   return <><Header /><main id="view"><section className="panel">{error ? <><p className="error" role="alert">{error}</p><button className="btn primary" onClick={() => setAttempt(attempt + 1)}>Réessayer</button><button className="btn link" onClick={() => void supabase.auth.signOut().then(({ error }) => { if (error) setError(error.message); })}>Se déconnecter</button></> : <p className="loading" role="status">Chargement de tes cartes…</p>}</section></main></>;
 }
 
@@ -40,5 +45,5 @@ export default function App() {
     }).catch(failure => { if (active) { setError(errorMessage(failure)); setUser(null); } });
     return () => { active = false; subscription.unsubscribe(); };
   }, []);
-  return <div className="app">{user ? <UserWorkspace key={user.id} user={user} /> : <><Header /><main id="view">{user === undefined ? <section className="panel"><p className="loading" role="status">Chargement…</p></section> : <AuthPage initialError={error} />}</main></>}</div>;
+  return <AppearanceProvider key={user?.id ?? 'guest'} userId={user?.id ?? null}><div className="app">{user ? <UserWorkspace key={user.id} user={user} /> : <><Header /><main id="view">{user === undefined ? <section className="panel"><p className="loading" role="status">Chargement…</p></section> : <AuthPage initialError={error} />}</main></>}<AppearanceSettings /></div></AppearanceProvider>;
 }

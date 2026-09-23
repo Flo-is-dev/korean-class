@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import type { CardRow, Progress, Stats } from '../types';
+import type { Book, CardRow, Progress, Stats } from '../types';
 import type { Database } from './database.types';
 
 // Publishable values, protected by the existing server-side RLS policies.
@@ -8,6 +8,16 @@ export const supabase = createClient<Database>(
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_XVzEwk-V4X6sfCT2mSzzjw_cEZQvJiV',
   { auth: { flowType: 'pkce', detectSessionInUrl: true, persistSession: true } },
 );
+export async function loadBooks(): Promise<Book[]> {
+  const books: Book[] = [];
+  for (let offset = 0; ; offset += 1000) {
+    const { data, error } = await supabase.from('books').select('code, label')
+      .order('sort_order').order('code').range(offset, offset + 999);
+    if (error) throw error;
+    books.push(...data);
+    if (data.length < 1000) return books;
+  }
+}
 export async function loadCards(): Promise<CardRow[]> {
   const rows: CardRow[] = [];
   for (let offset = 0; ; offset += 1000) {
