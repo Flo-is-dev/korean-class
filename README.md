@@ -69,6 +69,8 @@ Les scores, XP, badges et préférences existants sont relus automatiquement
 à Vite sur un autre port donne un stockage navigateur différent. Pour
 retrouver ces données, servir la nouvelle application à l’ancienne adresse,
 par exemple `npm run dev -- --port 5500 --strictPort` si elle utilisait ce port.
+Sous PowerShell, utiliser `npm.cmd run dev -- --port 5500 --strictPort` si
+le lanceur `npm` ne transmet pas correctement les options.
 
 Ces données locales ne sont pas synchronisées entre appareils. Les cartes et
 la progression par mot restent synchronisées via Supabase, quelle que soit
@@ -103,6 +105,11 @@ DOM de test et un client Supabase simulé, sans modifier la base réelle.
 Pour déployer, servir le contenu de `dist/` après `npm run build` et conserver
 l’URL Supabase Auth autorisée. Vérifier dans le navigateur la connexion réelle,
 le rendu mobile, le clavier coréen et les sons.
+
+Sur Netlify, `netlify.toml` configure automatiquement `npm run build`, le dossier
+publié `dist` et Node 22. La branche de production se choisit dans Netlify
+(`main` pour ce dépôt). Ne pas publier la racine du projet : elle contient
+le TypeScript source, que le navigateur ne peut pas exécuter directement.
 
 Documentation : [React et TypeScript](https://react.dev/learn/typescript),
 [Vite](https://vite.dev/guide/).
