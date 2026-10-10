@@ -102,11 +102,41 @@ describe('quiz interactions', () => {
     at(9500); expect(countdown()).toBe('2 s'); expect(onSound).toHaveBeenCalledTimes(2);
     at(11000); expect(onAnswer).toHaveBeenCalledExactlyOnceWith('1', false); expect(screen.getByText('Temps écoulé')).toBeDefined(); expect(countdown()).toBe('0 s');
     at(15000); expect(onAnswer).toHaveBeenCalledTimes(1); expect(onSound).toHaveBeenCalledTimes(2);
-    expect(screen.getByRole('timer', { name: 'Temps écoulé' }).textContent).toContain('0:14.0');
+    expect(screen.getByRole('timer', { name: 'Temps écoulé' }).textContent).toContain('0:10.0');
     fireEvent.click(screen.getByRole('button', { name: /Carte suivante/ })); expect(countdown()).toBe('10 s');
     at(17000); fireEvent.click([...view.container.querySelectorAll('.choice')].find(choice => choice.textContent!.endsWith('마시다'))!);
     expect(onAnswer).toHaveBeenLastCalledWith('2', true); expect(countdown()).toBe('8 s');
-    at(30000); expect(onAnswer).toHaveBeenCalledTimes(2); expect(screen.getByRole('timer', { name: 'Temps écoulé' }).textContent).toContain('0:16.0');
+    at(30000); expect(onAnswer).toHaveBeenCalledTimes(2); expect(screen.getByRole('timer', { name: 'Temps écoulé' }).textContent).toContain('0:12.0');
+  });
+  it('excludes time spent reading every answer, resumes cumulatively and saves only answering time', () => {
+    vi.useFakeTimers(); let now = 1000; vi.spyOn(performance, 'now').mockImplementation(() => now);
+    const { onFinish } = setup();
+    const at = (time: number) => { now = time; act(() => vi.advanceTimersByTime(100)); };
+    at(3500); answer('incorrect');
+    expect(screen.getByRole('timer').textContent).toContain('0:02.5');
+    expect(screen.getByText('En pause')).toBeDefined();
+    at(63500); expect(screen.getByRole('timer').textContent).toContain('0:02.5');
+    fireEvent.click(screen.getByRole('button', { name: /Carte suivante/ }));
+    expect(screen.queryByText('En pause')).toBeNull();
+    at(65000); expect(screen.getByRole('timer').textContent).toContain('0:04.0');
+    answer('마시다');
+    at(90000); fireEvent.click(screen.getByRole('button', { name: /Voir le résultat/ }));
+    expect(onFinish.mock.calls[0][0]).toMatchObject({ seconds: 4, completed: true });
+  });
+  it('does not double-count settings opened while reading an answer, including early finish', () => {
+    vi.useFakeTimers(); let now = 1000; vi.spyOn(performance, 'now').mockImplementation(() => now);
+    const onFinish = vi.fn();
+    const props = { run: { id: 1, cards, mode: 'type' as const, timed: true, custom: false }, onAnswer: vi.fn(), onOverride: vi.fn(), onFinish };
+    const view = render(<QuizPage {...props} />);
+    now = 3000; answer('먹다');
+    now = 5000; view.rerender(<QuizPage {...props} paused />);
+    now = 65000; view.rerender(<QuizPage {...props} />);
+    expect(screen.getByRole('timer').textContent).toContain('0:02.0');
+    now = 70000; fireEvent.click(screen.getByRole('button', { name: /Carte suivante/ }));
+    now = 73000; act(() => vi.advanceTimersByTime(100));
+    expect(screen.getByRole('timer').textContent).toContain('0:05.0');
+    fireEvent.click(screen.getByRole('button', { name: 'Terminer' }));
+    expect(onFinish.mock.calls[0][0]).toMatchObject({ seconds: 5, completed: false });
   });
   it('cleans up its timer when navigating away', () => {
     vi.useFakeTimers();

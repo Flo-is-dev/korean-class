@@ -16,6 +16,8 @@ export function QuizPage({ run, pool, paused = false, onAnswer, onOverride, onFi
   const [elapsed, setElapsed] = useState(0);
   const [answer, setAnswer] = useState<Answer | null>(null);
   const started = useRef(performance.now());
+  // Timestamp at which the current answer stopped the global clock.
+  // Reading time is removed from `started` only when the next card is activated.
   const ended = useRef<number | null>(null);
   const results = useRef<Answer[]>([]);
   const handled = useRef(false);
@@ -45,11 +47,11 @@ export function QuizPage({ run, pool, paused = false, onAnswer, onOverride, onFi
     if (ended.current === null) started.current += gap;
   }, [paused]);
   useEffect(() => {
-    if (!run.timed || paused) return;
+    if (!run.timed || paused || revealed) return;
     const tick = () => setElapsed(((ended.current ?? performance.now()) - started.current) / 1000);
     tick(); const timer = setInterval(tick, 100);
     return () => clearInterval(timer);
-  }, [run.timed, paused]);
+  }, [run.timed, paused, revealed, index]);
   useEffect(() => {
     if (paused) return;
     if (typed) { if (revealed) nextRef.current?.focus(); else inputRef.current?.focus(); }
@@ -66,20 +68,26 @@ export function QuizPage({ run, pool, paused = false, onAnswer, onOverride, onFi
     setRevealed(true); onSound?.('flip');
   }
   function next() {
-    if (!handled.current || finished.current) return;
+    if (paused || !handled.current || finished.current) return;
     if (index + 1 >= run.cards.length) return finish();
+    const now = performance.now();
+    if (ended.current !== null) {
+      started.current += now - ended.current;
+      ended.current = null;
+    }
     handled.current = false; setIndex(index + 1); setRevealed(false); setInput(''); setAnswer(null);
-    cardStarted.current = performance.now(); lastTick.current = 0; setLeft(limit); setLate(false);
+    cardStarted.current = now; lastTick.current = 0; setLeft(limit); setLate(false);
   }
   function submit(ok: boolean, raw?: string) {
-    if (handled.current || finished.current) return;
+    if (paused || handled.current || finished.current) return;
     handled.current = true;
+    if (run.timed) {
+      ended.current = performance.now(); setElapsed((ended.current - started.current) / 1000);
+      if (limit) setLeft(Math.max(0, limit - (ended.current - cardStarted.current) / 1000));
+    }
     const result = { card, ok, typed: raw };
     previous.current = onAnswer(card.id, ok);
     results.current.push(result); setAnswer(result); setRevealed(true);
-    if (run.timed && results.current.length === run.cards.length) {
-      ended.current = performance.now(); setElapsed((ended.current - started.current) / 1000);
-    }
     if (flash) next();
   }
   function choose(choice: string) {
@@ -126,7 +134,7 @@ export function QuizPage({ run, pool, paused = false, onAnswer, onOverride, onFi
   return <>
     <div className="field quiz-layout">
       <div className="quiz-status">
-        {run.timed && <div className="quiz-stat" role="timer" aria-label="Temps écoulé"><Icon name="stopwatch" size={28} />{formatTime(elapsed)}</div>}
+        {run.timed && <div className="quiz-clock"><div className="quiz-stat" role="timer" aria-label="Temps écoulé"><Icon name="stopwatch" size={28} />{formatTime(elapsed)}</div>{revealed && <span className="clock-paused" role="status">En pause</span>}</div>}
         <div className="quiz-stat" title="Avancement de la série"><Icon name="cards" size={28} />{index + 1} / {run.cards.length}</div>
         <button className="btn link" onClick={finish}>Terminer</button>
       </div>

@@ -56,8 +56,40 @@ const art = {
     <path d="M14.6 9.4c1.2-.5 2.3-.7 3.6-.7M14.6 12.6c1.2-.5 2.3-.7 3.6-.7" {...mark} strokeWidth={1.3} />
   </>,
 };
+// Haru's navigation: hand-drawn hangul cards, a split dial, a bound notebook,
+// and a small star cup. Colors inherit the active Pop / dark palette.
+const navigationArt = {
+  cards: <>
+    <path className="icon-soft-shadow" d="m7 7 15-2 2 22-15 2z" />
+    <path className="icon-tint" d="M6 5 19 2l5 21-13 3z" />
+    <rect className="icon-paper" x="10" y="6" width="17" height="24" rx="5" />
+    <path d="M15 13h5v8m3-8v9m0-5h3M16 26h5" />
+    <circle className="icon-dot" cx="7" cy="27" r="2" />
+  </>,
+  stopwatch: <>
+    <path className="icon-tint" d="M12 2h8v5h-8z" /><path d="m24 8 3-3m-2-1 3 3" />
+    <circle className="icon-paper" cx="16" cy="19" r="12" />
+    <path className="icon-tint" d="M16 9a10 10 0 0 1 10 10H16z" />
+    <path d="M16 11v8l-5 4M6 19h2m16 0h2m-10 8v2" /><circle className="icon-dot" cx="16" cy="19" r="2" />
+  </>,
+  book: <>
+    <path className="icon-soft-shadow" d="M6 7h21v23H6z" />
+    <path className="icon-paper" d="M9 4h16a3 3 0 0 1 3 3v20H9a4 4 0 0 1 0-8V4Z" />
+    <path className="icon-tint" d="M9 4h5v23H9a4 4 0 0 1 0-8Z" />
+    <path d="M9 27h19M18 15h5m-5 4h3" /><path className="icon-ribbon" d="M20 4h5v7l-2.5-2-2.5 2z" />
+    <path d="M5 10h5m-5 5h5" />
+  </>,
+  trophy: <>
+    <path className="icon-tint" d="M10 8H4v5a6 6 0 0 0 7 6m11-11h6v5a6 6 0 0 1-7 6" />
+    <path className="icon-paper" d="M9 6h14v9a7 7 0 0 1-14 0Z" />
+    <path d="M16 22v5m-5 3h10m-10 0 1-3h8l1 3" />
+    <path className="icon-ribbon" d="m16 9 1.3 2.6 2.9.4-2.1 2 .5 2.9-2.6-1.4-2.6 1.4.5-2.9-2.1-2 2.9-.4z" />
+    <path d="M27 1v4m-2-2h4" />
+  </>,
+};
 export type IconName = keyof typeof art;
 
 export function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
+  if (name in navigationArt) return <svg className="icon haru-icon" viewBox="0 0 32 32" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{navigationArt[name as keyof typeof navigationArt]}</svg>;
   return <svg className="icon" viewBox="0 0 26 26" width={size} height={size} aria-hidden="true"><g className="icon-shadow" transform="translate(1.6 1.6)">{art[name]}</g>{art[name]}</svg>;
 }

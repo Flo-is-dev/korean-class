@@ -29,6 +29,7 @@ export function LibraryPage({ books, rows, filters, admin, busy, onFilters, onSt
   }
   return <>
     <section className="panel" aria-busy={busy}>
+      <h2>Mes mots</h2>
       <div className="filters row"><input className="search" type="search" aria-label="Rechercher un mot" placeholder="Rechercher en français ou en coréen…" disabled={busy} value={filters.query} onChange={event => onFilters({ ...filters, query: event.target.value })} /><SelectField label="Catégorie" value={filters.cat} options={[["all", "Toutes les catégories"], ...CATEGORIES.map(cat => [cat.key, cat.label] as const)]} onChange={value => onFilters({ ...filters, cat: value as Category | 'all' })} />{books !== null && <SelectField label="Livre" value={filters.book} options={bookOptions} onChange={value => onFilters({ ...filters, book: value as BookFilter })} />}</div>
       <p className="note" role="status">{visible.length} mots affichés sur {rows.length}</p>
       <div className="selection-toolbar"><label><input ref={all} type="checkbox" disabled={busy || !visible.length} checked={allChecked} onChange={event => select(visible.map(row => row.id), event.target.checked)} />Tout sélectionner (résultats filtrés)</label><span className="selection-count">{filters.selected.size} sélectionné(s)</span><button className="btn link" disabled={busy} onClick={() => onFilters({ ...filters, selected: new Set() })}>Tout désélectionner</button></div>
