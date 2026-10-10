@@ -12,7 +12,11 @@ export interface CardRow {
   ko: string;
   fr: string;
   short_form: string | null;
+  zh_hanzi?: string | null;
+  zh_pinyin?: string | null;
+  zh_note?: string | null;
 }
+export interface Chinese { hanzi: string; pinyin: string | null; note: string | null }
 export interface Card {
   id: string;
   cat: Category;
@@ -21,6 +25,7 @@ export interface Card {
   tag: string;
   hint?: string;
   alt?: string;
+  zh?: Chinese;
   extra: string[];
   accepted: Set<string>;
   others: string[];
@@ -38,7 +43,8 @@ export interface Score {
   adjusted: number;
   custom: boolean;
 }
-export interface Game { xp: number; days: string[]; scores: Score[]; sound: boolean; daily: Record<string, number> }
+export interface Game { xp: number; days: string[]; scores: Score[]; sound: boolean; effects: boolean; music: boolean; daily: Record<string, number> }
+export type AudioPrefs = Pick<Game, 'sound' | 'effects' | 'music'>;
 export interface QuizRun { id: number; cards: Card[]; mode: Mode; timed: boolean; custom: boolean }
 export interface Answer { card: Card; ok: boolean; typed?: string }
 export interface QuizResult { run: QuizRun; answers: Answer[]; seconds: number; completed: boolean }

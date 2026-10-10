@@ -56,6 +56,17 @@ describe('quiz interactions', () => {
     expect(onAnswer.mock.calls).toEqual([['1', true], ['2', false]]);
     expect(onFinish.mock.calls[0][0].completed).toBe(true);
   });
+  it('flips on a card click and shows the Chinese cognate, with its pinyin only on demand', () => {
+    const zh = buildCards([{ id: 'z', category: 'vocab', word_type: null, ko: '생선', fr: 'Poisson', book: null, lesson: null, short_form: null, zh_hanzi: '生鲜', zh_pinyin: 'shēngxiān', zh_note: 'En chinois : produits frais.' }]);
+    const onSound = vi.fn();
+    const view = render(<QuizPage run={{ id: 1, cards: zh, mode: 'flash', timed: false, custom: false }} onAnswer={() => undefined} onOverride={() => {}} onFinish={() => {}} onSound={onSound} />);
+    expect(screen.queryByRole('button', { name: '生鲜' })).toBeNull();
+    fireEvent.click(view.container.querySelector('.card')!);
+    expect(onSound).toHaveBeenCalledExactlyOnceWith('flip'); expect(screen.queryByText('shēngxiān')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: '生鲜' }));
+    expect(screen.getByText('shēngxiān')).toBeDefined(); expect(screen.getByText('En chinois : produits frais.')).toBeDefined(); expect(onSound).toHaveBeenCalledTimes(1);
+    fireEvent.keyDown(document, { key: 'Escape' }); expect(screen.queryByText('shēngxiān')).toBeNull();
+  });
   it('cleans up its timer when navigating away', () => {
     vi.useFakeTimers();
     const intervals = vi.spyOn(globalThis, 'setInterval');

@@ -16,7 +16,7 @@ import { buildCards, isError } from './lib/cards';
 import { loadBookFilter, loadGame, loadSettings, saveBookFilter, saveGame, saveSettings } from './lib/storage';
 import { rewardSession, streakDays, today } from './lib/game';
 import { deleteCards, errorMessage, supabase } from './lib/supabase';
-import { playSound } from './lib/sound';
+import { playSound, setMusic } from './lib/sound';
 import { useProgress } from './hooks/useProgress';
 
 const pages: [Page, IconName, string][] = [['learn', 'cards', 'Apprendre'], ['chrono', 'stopwatch', 'Chrono'], ['words', 'book', 'Mes mots'], ['scores', 'trophy', 'Scores']];
@@ -44,6 +44,9 @@ export function Workspace({ user, initialRows, initialStats, admin, books }: { b
       saveBookFilter(book);
     }
   }, [books, rows, library.book]);
+  const effects = game.sound && game.effects;
+  const music = game.sound && game.music;
+  useEffect(() => { setMusic(music); return () => setMusic(false); }, [music]);
   const sequence = useRef(0);
   const awarded = useRef(new Set<number>());
 
@@ -64,6 +67,7 @@ export function Workspace({ user, initialRows, initialStats, admin, books }: { b
   }
   function start(selected: Card[], timed = false, custom = false) {
     if (!selected.length || busyRef.current) return;
+    playSound('tap', effects);
     setResult(null);
     setRun({ id: ++sequence.current, cards: selected, mode: timed ? 'type' : settings.mode, timed, custom });
   }
@@ -71,7 +75,7 @@ export function Workspace({ user, initialRows, initialStats, admin, books }: { b
     if (awarded.current.has(completed.run.id)) return;
     awarded.current.add(completed.run.id);
     const rewarded = rewardSession(game, completed);
-    if (completed.completed) { persistGame(rewarded.game); playSound('complete', game.sound); }
+    if (completed.completed) { persistGame(rewarded.game); playSound('complete', effects); }
     setResult({ result: completed, reward: rewarded.reward }); setRun(null); void progress.flush();
   }
   async function remove(ids: string[]) {
@@ -106,12 +110,12 @@ export function Workspace({ user, initialRows, initialStats, admin, books }: { b
     <div className="game-bar"><span className="stat-pill"><Icon name="bolt" />{game.xp} XP</span><span className="stat-pill"><Icon name="flame" />{streakDays(game.days)} jours</span><span className="stat-pill"><Icon name="target" />{Math.min(game.daily[today()] ?? 0, 20)}/20 aujourd’hui</span></div>
     {progress.saveError && <div className="save-error" role="alert">La dernière sauvegarde de progression a échoué. <button className="btn link" onClick={() => void progress.flush()}>Réessayer la sauvegarde</button></div>}
     <main id="view">
-      {run ? <QuizPage key={run.id} run={run} onAnswer={(id, ok) => { playSound(ok ? 'correct' : 'wrong', game.sound); return progress.record(id, ok); }} onOverride={(id, previous) => { progress.override(id, previous); playSound('correct', game.sound); }} onFinish={finish} /> : result ? <ResultPage {...result} onRetry={selected => start(selected)} onLearn={() => navigate('learn')} onScores={() => navigate('scores')} /> : <>
+      {run ? <QuizPage key={run.id} run={run} onAnswer={(id, ok) => { playSound(ok ? 'correct' : 'wrong', effects); return progress.record(id, ok); }} onOverride={(id, previous) => { progress.override(id, previous); playSound('correct', effects); }} onFinish={finish} onSound={kind => playSound(kind, effects)} /> : result ? <ResultPage {...result} onRetry={selected => start(selected)} onLearn={() => navigate('learn')} onScores={() => navigate('scores')} /> : <>
         {page === 'learn' && <LearnPage cards={cards} settings={settings} stats={progress.stats} onSettings={changeSettings} onStart={selected => start(selected)} />}
         {page === 'chrono' && <ChronoPage cards={cards} category={chronoCategory} size={chronoSize} onCategory={setChronoCategory} onSize={setChronoSize} onStart={selected => start(selected, true)} onChoose={() => { setLibrary(current => ({ ...current, query: '', cat: chronoCategory, selected: new Set() })); navigate('words'); }} />}
         {page === 'words' && <LibraryPage books={books} rows={rows} filters={library} admin={admin} busy={busy} onFilters={next => { if (!busyRef.current) { setLibrary(next); if (next.book !== library.book) saveBookFilter(next.book); } }} onStart={selected => start(selected, true, true)} onDelete={ids => void remove(ids)} />}
         {page === 'scores' && <ScoresPage game={game} onChallenge={() => navigate('chrono')} />}
-        {page === 'settings' && <SettingsPage email={user.email} busy={busy} sound={game.sound} onSound={sound => persistGame({ ...game, sound })} onSignOut={() => void signOut()} />}
+        {page === 'settings' && <SettingsPage email={user.email} busy={busy} audio={game} onAudio={patch => persistGame({ ...game, ...patch })} onSignOut={() => void signOut()} />}
       </>}
     </main>
     {notice && <p className="notice" role="status">{notice}<button className="btn link" aria-label="Fermer le message" onClick={() => setNotice('')}>Fermer</button></p>}

@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import type { Answer, Progress, QuizResult, QuizRun } from '../types';
 import { categoryName, normalize } from '../lib/cards';
 import { formatTime } from '../lib/game';
+import { Hanzi } from '../components/Hanzi';
 import { Icon } from '../components/Icon';
 
-export function QuizPage({ run, onAnswer, onOverride, onFinish }: {
-  run: QuizRun; onAnswer: (id: string, ok: boolean) => Progress | undefined; onOverride: (id: string, previous: Progress | undefined) => void; onFinish: (result: QuizResult) => void;
+export function QuizPage({ run, onAnswer, onOverride, onFinish, onSound }: {
+  run: QuizRun; onAnswer: (id: string, ok: boolean) => Progress | undefined; onOverride: (id: string, previous: Progress | undefined) => void; onFinish: (result: QuizResult) => void; onSound?: (kind: 'flip' | 'tap') => void;
 }) {
   const [index, setIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
@@ -39,6 +40,10 @@ export function QuizPage({ run, onAnswer, onOverride, onFinish }: {
     finished.current = true;
     onFinish({ run, answers: [...results.current], seconds: ((ended.current ?? performance.now()) - started.current) / 1000, completed: results.current.length === run.cards.length });
   }
+  function reveal() {
+    if (revealed) return;
+    setRevealed(true); onSound?.('flip');
+  }
   function next() {
     if (!handled.current || finished.current) return;
     if (index + 1 >= run.cards.length) return finish();
@@ -69,7 +74,7 @@ export function QuizPage({ run, onAnswer, onOverride, onFinish }: {
   useEffect(() => {
     function keydown(event: KeyboardEvent) {
       if (typed || event.metaKey || event.ctrlKey || event.altKey || event.repeat) return;
-      if (!revealed && (event.key === ' ' || event.key === 'Enter')) { event.preventDefault(); setRevealed(true); }
+      if (!revealed && (event.key === ' ' || event.key === 'Enter')) { event.preventDefault(); reveal(); }
       else if (revealed && ['1', 'ArrowLeft', '2', 'ArrowRight'].includes(event.key)) { event.preventDefault(); submit(event.key === '2' || event.key === 'ArrowRight'); }
     }
     document.addEventListener('keydown', keydown);
@@ -79,13 +84,13 @@ export function QuizPage({ run, onAnswer, onOverride, onFinish }: {
     {run.timed && <div className="live-clock" role="timer" aria-label="Temps écoulé"><Icon name="stopwatch" size={28} />{formatTime(elapsed)}</div>}
     <div className="field quiz-layout">
       <div className="progress"><span>{index + 1} / {run.cards.length}</span><div className="bar" role="progressbar" aria-label="Avancement de la série" aria-valuemin={0} aria-valuemax={run.cards.length} aria-valuenow={results.current.length}><i style={{ width: `${results.current.length / run.cards.length * 100}%` }} /></div><button className="btn link" onClick={finish}>Terminer</button></div>
-      <div className={`card ${revealed ? 'flipped' : ''}`} aria-live="polite"><div className="card-inner">
+      <div className={`card ${revealed ? 'flipped' : typed ? '' : 'clickable'}`} aria-live="polite" onClick={typed ? undefined : reveal}><div className="card-inner">
         <div className="face front" aria-hidden={revealed}><div className="tag"><span>{categoryName(card.cat)}</span><span>{card.tag}</span></div><div className="fr">{card.front}</div>{card.hint && <div className="hint">{card.hint}</div>}</div>
-        <div className="face back" aria-hidden={!revealed}><div className="tag"><span>{card.front}</span><span>{card.tag}</span></div>{answer && <span className={`verdict ${answer.ok ? 'ok' : 'ko-v'}`}>{answer.ok ? 'Correct' : 'Pas tout à fait'}</span>}<div className="ko" lang="ko">{card.back}</div>{card.alt && <div className="ko-alt" lang="ko">{card.alt}</div>}{card.others.length > 0 && <div className="ko-alt" lang="ko">aussi : {card.others.join(' · ')}</div>}{answer?.typed && !answer.ok && <div className="yours">Ta réponse : <b lang="ko">{answer.typed}</b></div>}</div>
+        <div className="face back" aria-hidden={!revealed}><div className="tag"><span>{card.front}</span><span>{card.tag}</span></div>{answer && <span className={`verdict ${answer.ok ? 'ok' : 'ko-v'}`}>{answer.ok ? 'Correct' : 'Pas tout à fait'}</span>}<div className="ko" lang="ko">{card.back}{revealed && card.zh && <Hanzi key={card.id} zh={card.zh} />}</div>{card.alt && <div className="ko-alt" lang="ko">{card.alt}</div>}{card.others.length > 0 && <div className="ko-alt" lang="ko">aussi : {card.others.join(' · ')}</div>}{answer?.typed && !answer.ok && <div className="yours">Ta réponse : <b lang="ko">{answer.typed}</b></div>}</div>
       </div></div>
       <div className="field">
-        {!typed && (!revealed ? <button ref={flipRef} className="btn primary" onClick={() => setRevealed(true)}>Retourner la carte <span className="kbd">Espace</span></button> : <div className="row"><button className="btn bad" onClick={() => submit(false)}>Je ne savais pas <span className="kbd">1</span></button><button ref={yesRef} className="btn good" onClick={() => submit(true)}>Je savais <span className="kbd">2</span></button></div>)}
-        {typed && (!revealed ? <><form className="answer" onSubmit={event => { event.preventDefault(); check(); }}><input ref={inputRef} type="text" lang="ko" autoComplete="off" autoCapitalize="off" autoCorrect="off" spellCheck={false} placeholder="Réponse en hangul" aria-label="Ta réponse en coréen" value={input} onChange={event => setInput(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && (event.nativeEvent.isComposing || event.keyCode === 229)) event.preventDefault(); }} /><button className="btn primary" type="submit">Vérifier</button></form><button className="btn link" onClick={() => check(true)}>Je ne sais pas</button></> : <div className="row">{!run.timed && answer?.typed && !answer.ok && <button className="btn" title="Faute de frappe ou variante valable" onClick={override}>J’avais bon</button>}<button ref={nextRef} className="btn primary" onClick={next}>{index + 1 < run.cards.length ? 'Carte suivante' : 'Voir le résultat'} <span className="kbd">Entrée</span></button></div>)}
+        {!typed && (!revealed ? <button ref={flipRef} className="btn primary" onClick={reveal}>Retourner la carte <span className="kbd">Espace</span></button> : <div className="row"><button className="btn bad" onClick={() => submit(false)}>Je ne savais pas <span className="kbd">1</span></button><button ref={yesRef} className="btn good" onClick={() => submit(true)}>Je savais <span className="kbd">2</span></button></div>)}
+        {typed && (!revealed ? <><form className="answer" onSubmit={event => { event.preventDefault(); check(); }}><input ref={inputRef} type="text" lang="ko" autoComplete="off" autoCapitalize="off" autoCorrect="off" spellCheck={false} placeholder="Réponse en hangul" aria-label="Ta réponse en coréen" value={input} onChange={event => setInput(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && (event.nativeEvent.isComposing || event.keyCode === 229)) event.preventDefault(); }} /><button className="btn primary" type="submit">Vérifier</button></form><button className="btn link" onClick={() => check(true)}>Je ne sais pas</button></> : <div className="row">{!run.timed && answer?.typed && !answer.ok && <button className="btn" title="Faute de frappe ou variante valable" onClick={override}>J’avais bon</button>}<button ref={nextRef} className="btn primary" onClick={() => { onSound?.('tap'); next(); }}>{index + 1 < run.cards.length ? 'Carte suivante' : 'Voir le résultat'} <span className="kbd">Entrée</span></button></div>)}
       </div>
     </div>
   </>;

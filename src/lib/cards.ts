@@ -1,4 +1,4 @@
-import type { Card, CardRow, Category, Progress, Settings, Stats } from '../types';
+import type { Card, CardRow, Category, Chinese, Progress, Settings, Stats } from '../types';
 
 export const CATEGORIES: { key: Category; label: string }[] = [
   { key: 'vocab', label: 'Vocabulaire' }, { key: 'verbs', label: 'Verbes' },
@@ -11,6 +11,7 @@ export const categoryName = (key: string) => CATEGORIES.find(cat => cat.key === 
 export const normalize = (text: string) => text.normalize('NFC').toLowerCase().replace(/\([^)]*\)/g, '').replace(/[\s~\-.,?!'’"«»…=]/g, '');
 export const searchText = (text: string) => text.toLocaleLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 export const lessonTag = (row: CardRow) => [row.book, row.lesson != null ? `L${row.lesson}` : ''].filter(Boolean).join(' · ');
+export const chineseOf = (row: CardRow): Chinese | undefined => row.zh_hanzi ? { hanzi: row.zh_hanzi, pinyin: row.zh_pinyin ?? null, note: row.zh_note ?? null } : undefined;
 export const categoryOf = (row: CardRow): Category => row.category === 'vocab' ? row.word_type === 'verb' ? 'verbs' : row.word_type === 'adjective' ? 'adjectives' : 'vocab' : row.category;
 
 function variants(ko: string) {
@@ -27,7 +28,7 @@ export function buildCards(rows: CardRow[]): Card[] {
     seen.add(key);
     cards.push({ id: row.id, cat, front: row.fr, back: row.ko, tag: lessonTag(row),
       hint: cat === 'classifiers' ? 'Quel classificateur ?' : cat === 'numbers' ? 'En coréen natif' : undefined,
-      alt: cat === 'numbers' && row.short_form ? `forme courte : ${row.short_form}` : undefined,
+      alt: cat === 'numbers' && row.short_form ? `forme courte : ${row.short_form}` : undefined, zh: chineseOf(row),
       extra: cat === 'numbers' && row.short_form ? [row.short_form] : [], accepted: new Set(), others: [] });
   }
   const groups = new Map<string, Card[]>();

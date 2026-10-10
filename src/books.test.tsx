@@ -7,7 +7,7 @@ import { loadBookFilter, saveBookFilter } from './lib/storage';
 
 const api = vi.hoisted(() => ({ deleteCards: vi.fn(), saveProgress: vi.fn(), signOut: vi.fn() }));
 vi.mock('./lib/supabase', () => ({ ...api, supabase: { auth: { signOut: api.signOut } }, errorMessage: (error: Error) => error.message }));
-vi.mock('./lib/sound', () => ({ playSound: vi.fn() }));
+vi.mock('./lib/sound', () => ({ playSound: vi.fn(), setMusic: vi.fn() }));
 const books: Book[] = [{ code: '초급2', label: 'Débutant 2' }, { code: '초급1', label: 'Débutant 1' }, { code: 'new', label: 'Nouveau livre' }];
 const rows: CardRow[] = [
   { id: '1', category: 'vocab', word_type: 'verb', ko: '먹다', fr: 'Manger', book: '초급1', lesson: 1, short_form: null },

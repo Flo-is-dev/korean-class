@@ -3,12 +3,13 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { User } from '@supabase/supabase-js';
 import { Workspace } from './Workspace';
+import { setMusic } from './lib/sound';
 import { AppearanceProvider } from './components/AppearanceSettings';
 import type { CardRow } from './types';
 
 const api = vi.hoisted(() => ({ deleteCards: vi.fn(), saveProgress: vi.fn(), signOut: vi.fn() }));
 vi.mock('./lib/supabase', () => ({ ...api, supabase: { auth: { signOut: api.signOut } }, errorMessage: (error: Error) => error.message }));
-vi.mock('./lib/sound', () => ({ playSound: vi.fn() }));
+vi.mock('./lib/sound', () => ({ playSound: vi.fn(), setMusic: vi.fn() }));
 const rows: CardRow[] = [
   { id: '1', category: 'vocab', word_type: 'verb', ko: '먹다', fr: 'Manger', book: null, lesson: null, short_form: null },
   { id: '2', category: 'vocab', word_type: 'verb', ko: '마시다', fr: 'Boire', book: null, lesson: null, short_form: null },
@@ -69,10 +70,22 @@ describe('React workspace', () => {
     expect([...view.container.querySelector('.game-bar')!.children].map(child => child.textContent)).toEqual(['0 XP', '0 jours', '0/20 aujourd’hui']);
     expect(screen.queryByRole('switch', { name: 'Sons' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Réglages' }));
-    expect(screen.getByRole('switch', { name: 'Sons' }).getAttribute('aria-checked')).toBe('true'); expect(screen.getByText('Activés')).toBeDefined();
+    const saved = () => JSON.parse(localStorage.getItem('haru:game:test-user')!);
+    expect(screen.getByRole('switch', { name: 'Sons' }).getAttribute('aria-checked')).toBe('true'); expect(vi.mocked(setMusic)).toHaveBeenLastCalledWith(true);
+    fireEvent.click(screen.getByRole('switch', { name: 'Musique d’ambiance' }));
+    expect(saved()).toMatchObject({ sound: true, effects: true, music: false }); expect(vi.mocked(setMusic)).toHaveBeenLastCalledWith(false);
+    fireEvent.click(screen.getByRole('switch', { name: 'Musique d’ambiance' })); expect(vi.mocked(setMusic)).toHaveBeenLastCalledWith(true);
     fireEvent.click(screen.getByRole('switch', { name: 'Sons' }));
-    expect(screen.getByRole('switch', { name: 'Sons' }).getAttribute('aria-checked')).toBe('false'); expect(screen.getByText('Coupés')).toBeDefined();
-    expect(JSON.parse(localStorage.getItem('haru:game:test-user')!).sound).toBe(false);
+    expect(screen.getByRole('switch', { name: 'Sons' }).getAttribute('aria-checked')).toBe('false'); expect(screen.getByText('Tout est coupé')).toBeDefined();
+    expect(saved()).toMatchObject({ sound: false, effects: true, music: true }); expect(vi.mocked(setMusic)).toHaveBeenLastCalledWith(false);
+    for (const name of ['Effets sonores', 'Musique d’ambiance']) expect(screen.getByRole('switch', { name })).toMatchObject({ disabled: true, ariaChecked: 'false' });
+  });
+  it('lists the Chinese cognate with its pinyin next to the Korean word', () => {
+    render(<Workspace user={{ id: 'test-user', email: 'test@example.test' } as User} books={[]} initialRows={[{ ...rows[2], zh_hanzi: '学校', zh_pinyin: 'xuéxiào', zh_note: 'Même mot qu’en coréen.' }, rows[1]]} initialStats={{}} admin />);
+    go('Mes mots');
+    expect(screen.getAllByRole('button', { name: '学校' })).toHaveLength(1); expect(screen.getByText('xuéxiào')).toBeDefined(); expect(screen.queryByText('Même mot qu’en coréen.')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: '学校' })); expect(screen.getByText('Même mot qu’en coréen.')).toBeDefined();
+    expect((screen.getByRole('checkbox', { name: 'Sélectionner École' }) as HTMLInputElement).checked).toBe(false);
   });
   it('runs a manually selected chrono and stores one score and one reward in StrictMode', async () => {
     setup(); go('Mes mots');

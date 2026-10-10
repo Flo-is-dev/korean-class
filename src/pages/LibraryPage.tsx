@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { matchesBook } from '../lib/books';
+import { Hanzi } from '../components/Hanzi';
 import { SelectField } from '../components/SelectField';
-import { buildCards, categoryName, categoryOf, CATEGORIES, lessonTag, searchText, shuffle } from '../lib/cards';
+import { buildCards, categoryName, categoryOf, CATEGORIES, chineseOf, lessonTag, searchText, shuffle } from '../lib/cards';
 import type { Book, BookFilter, Card, CardRow, Category, LibraryFilters } from '../types';
 
 export function LibraryPage({ books, rows, filters, admin, busy, onFilters, onStart, onDelete }: {
@@ -35,7 +36,7 @@ export function LibraryPage({ books, rows, filters, admin, busy, onFilters, onSt
       <div className="row"><button className="btn primary" disabled={busy || !filters.selected.size} onClick={() => onStart(shuffle(buildCards(rows.filter(row => filters.selected.has(row.id)))))}>Chrono avec la sélection</button><button className="btn bad" disabled={busy || !admin || !filters.selected.size} onClick={() => onDelete([...filters.selected])}>{busy ? 'Suppression…' : 'Supprimer la sélection'}</button></div>
       <p className="note">{admin ? 'La suppression affecte le catalogue partagé. Une confirmation te sera demandée.' : 'La suppression du catalogue partagé est réservée aux administrateurs.'}</p>
       <p className="note">Les doublons identiques sont regroupés pendant les quiz. Les séries choisies manuellement ont leur propre classement.</p>
-      <div className="word-list">{visible.map(row => <label className="word-row" key={row.id}><input type="checkbox" disabled={busy} checked={filters.selected.has(row.id)} aria-label={`Sélectionner ${row.fr}`} onChange={event => select([row.id], event.target.checked)} /><span className="word-fr">{row.fr}</span><span className="word-ko" lang="ko">{row.ko}</span><span className="word-tag">{[categoryName(categoryOf(row)), lessonTag(row)].filter(Boolean).join(' · ')}</span></label>)}{!visible.length && <p className="empty-state">Aucun mot trouvé. Essaie une autre recherche.</p>}</div>
+      <div className="word-list">{visible.map(row => <label className="word-row" key={row.id}><input type="checkbox" disabled={busy} checked={filters.selected.has(row.id)} aria-label={`Sélectionner ${row.fr}`} onChange={event => select([row.id], event.target.checked)} /><span className="word-fr">{row.fr}</span><span className="word-ko" lang="ko">{row.ko}{row.zh_hanzi && <Hanzi showPinyin zh={chineseOf(row)!} />}</span><span className="word-tag">{[categoryName(categoryOf(row)), lessonTag(row)].filter(Boolean).join(' · ')}</span></label>)}{!visible.length && <p className="empty-state">Aucun mot trouvé. Essaie une autre recherche.</p>}</div>
     </section>
   </>;
 }

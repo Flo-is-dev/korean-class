@@ -40,19 +40,25 @@ cartes restent dans le même projet Supabase, avec les mêmes règles RLS.
 
 ## Fonctionnalités conservées
 
-- Design Pop responsive : fond crème, accents violet/pêche/jaune, contours francs et ombres décalées ; variante sombre assortie, mascotte tigre et sons désactivables.
+- Design Pop responsive : fond crème, accents violet/pêche/jaune, contours francs et ombres décalées ; variante sombre assortie. La tête du tigre Haru sert de logo et revient en coin de quelques sections.
 - Typographie DM Sans pour l’interface, Noto Sans KR pour le coréen et Noto Sans SC pour le chinois (chargées via Google Fonts, avec polices système de repli).
 - Icônes SVG maison (`components/Icon.tsx`) à la place des emoji : aplats, contour
   encre et ombre décalée, comme les boutons.
 - Réglages : page à part, ouverte par l’icône utilisateur de l’en-tête, avec le
   compte et la déconnexion. Polices coréennes Standard, Carrée et Manuscrite avec
-  aperçus, mode sombre et sons (interrupteurs à icône). Application locale avant le premier rendu, puis
+  aperçus, mode sombre et sons (interrupteurs à icône) : « Sons » coupe tout, « Effets
+  sonores » et « Musique d’ambiance » se règlent séparément. Application locale avant le premier rendu, puis
   lecture de `user_settings` après connexion (les valeurs serveur font foi).
   Une ligne absente utilise Standard et le thème clair. Les changements sont
   sauvegardés après 500 ms ; un échec affiche « Réglage non synchronisé »
   sans annuler le choix. Sur la page de connexion, seul le cache local est utilisé.
-- Entraînement : catégories, flashcards, saisie en hangul, raccourcis clavier,
-  variantes de réponses et révision des erreurs.
+- Entraînement : catégories, flashcards compactes qui se retournent au clic, saisie
+  en hangul, raccourcis clavier, variantes de réponses et révision des erreurs.
+- Chinois : quand une carte a un mot chinois de même origine (`zh_hanzi`), il
+  s’affiche à côté du coréen ; un clic sur les caractères ouvre une bulle avec le
+  pinyin et la note. Dans « Mes mots », le pinyin est affiché directement.
+- Sons : effets générés en Web Audio (carte retournée, validation, bonne ou
+  mauvaise réponse, fin de série) et musique d’ambiance générative, sans fichier audio.
 - Chrono : 10, 20 ou 50 mots tirés au sort dans une catégorie, ou sélection
   manuelle. Les doublons identiques sont regroupés dans les quiz.
 - Bibliothèque : catalogue complet paginé côté API, recherche français/coréen,

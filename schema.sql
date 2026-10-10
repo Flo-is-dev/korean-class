@@ -83,3 +83,8 @@ grant insert, update, delete on public.cards to authenticated;
 
 -- Promotion admin (à rejouer pour un autre compte) :
 -- update public.profiles set role = 'admin' where email = 'f.gironde.dev@gmail.com';
+
+-- Migration 03_chinese : mot chinois de même origine (hanzi, pinyin, note) ----
+alter table public.cards add column if not exists zh_hanzi text;
+alter table public.cards add column if not exists zh_pinyin text;
+alter table public.cards add column if not exists zh_note text;

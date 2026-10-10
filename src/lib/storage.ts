@@ -39,6 +39,8 @@ export function loadGame(userId: string): Game {
       days: Array.isArray(saved.days) ? saved.days.filter((day): day is string => typeof day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(day)) : [],
       scores: Array.isArray(saved.scores) ? saved.scores.filter(isScore).map(score => ({ ...score, custom: !!score.custom })) : [],
       sound: typeof saved.sound === 'boolean' ? saved.sound : true,
+      effects: typeof saved.effects === 'boolean' ? saved.effects : true,
+      music: typeof saved.music === 'boolean' ? saved.music : true,
       daily: isObject(saved.daily) ? Object.fromEntries(Object.entries(saved.daily).filter((entry): entry is [string, number] => nonNegative(entry[1]))) : {},
     };
   } catch { return emptyGame(); }

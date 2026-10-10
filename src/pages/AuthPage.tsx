@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Hero } from '../components/Hero';
+import { Mascot } from '../components/Mascot';
 import { supabase, errorMessage } from '../lib/supabase';
 
 export function AuthPage({ initialError = '' }: { initialError?: string }) {
@@ -35,7 +35,6 @@ export function AuthPage({ initialError = '' }: { initialError?: string }) {
   }
   function submit(event: FormEvent) { event.preventDefault(); void authenticate('login'); }
   return <>
-    <Hero title="Le coréen commence par un petit pas." subtitle="Retrouve tes mots, relève des défis et progresse un peu chaque jour." bubble="환영해!" />
     <section className="panel">
       <h2>Connexion</h2><p className="note">Connecte-toi pour retrouver tes cartes et tes erreurs sur tous tes appareils.</p>
       <button className="btn google" disabled={busy} onClick={() => void authenticate('google')}>Continuer avec Google</button>
@@ -46,6 +45,7 @@ export function AuthPage({ initialError = '' }: { initialError?: string }) {
         {message && <p role="status" className={`auth-msg ${failed ? 'error' : 'ok'}`}>{message}</p>}
         <div className="row"><button className="btn primary" disabled={busy} type="submit">Se connecter</button><button className="btn" disabled={busy} type="button" onClick={() => void authenticate('signup')}>Créer un compte</button></div>
       </form>
+      <Mascot />
     </section>
   </>;
 }
