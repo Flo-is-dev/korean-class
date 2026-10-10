@@ -3,6 +3,7 @@ import type { User } from '@supabase/supabase-js';
 import type { Book, Card, CardRow, Category, Game, LibraryFilters, Page, QuizResult, QuizRun, Settings, Stats } from './types';
 import { Header } from './components/Header';
 import { Icon } from './components/Icon';
+import { GameBar } from './components/GameBar';
 import type { IconName } from './components/Icon';
 import { LearnPage } from './pages/LearnPage';
 import { ChronoPage } from './pages/ChronoPage';
@@ -14,7 +15,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import { validateBookFilter } from './lib/books';
 import { buildCards, isError } from './lib/cards';
 import { loadBookFilter, loadGame, loadSettings, saveBookFilter, saveGame, saveSettings } from './lib/storage';
-import { rewardSession, streakDays, today } from './lib/game';
+import { rewardSession } from './lib/game';
 import { deleteCards, errorMessage, supabase } from './lib/supabase';
 import { playSound, setMusic } from './lib/sound';
 import { useProgress } from './hooks/useProgress';
@@ -109,7 +110,7 @@ export function Workspace({ user, initialRows, initialStats, admin, books }: { b
   }
   return <>
     <Header onHome={() => navigate('learn')} onSettings={() => setSettingsOpen(!settingsOpen)} settings={settingsOpen}><div className="meta"><span>{cards.length} cartes · {cards.filter(card => isError(progress.stats[card.id])).length} à revoir</span><span>Niveau {Math.floor(game.xp / 200) + 1} · {200 - game.xp % 200} XP avant le suivant</span></div></Header>
-    <div className="game-bar"><span className="stat-pill"><Icon name="bolt" />{game.xp} XP</span><span className="stat-pill"><Icon name="flame" />{streakDays(game.days)} jours</span><span className="stat-pill" title="Cartes étudiées aujourd’hui"><Icon name="target" />{Math.min(game.daily[today()] ?? 0, 20)}/20<span className="sr-only"> aujourd’hui</span></span></div>
+    <GameBar game={game} />
     {progress.saveError && <div className="save-error" role="alert">La dernière sauvegarde de progression a échoué. <button className="btn link" onClick={() => void progress.flush()}>Réessayer la sauvegarde</button></div>}
     <main id="view" ref={viewRef}>
       {settingsOpen && <SettingsPage email={user.email} busy={busy} audio={game} onAudio={patch => persistGame({ ...game, ...patch })} onSignOut={() => void signOut()} onBack={() => setSettingsOpen(false)} backLabel={run ? 'Reprendre la série' : 'Retour'} />}

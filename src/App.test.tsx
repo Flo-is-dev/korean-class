@@ -65,9 +65,9 @@ describe('authentication and account lifecycle', () => {
     localStorage.setItem('haru:game:first', JSON.stringify({ xp: 400, days: [], scores: [], sound: false, daily: {} }));
     const view = render(<App />); await screen.findByText('Connexion');
     await act(async () => notify('SIGNED_IN', { user: { id: 'first', email: 'first@example.test' } } as Session));
-    await screen.findByText('400 XP');
+    await screen.findByTitle(/^400 XP ·/);
     await act(async () => notify('SIGNED_IN', { user: { id: 'second', email: 'second@example.test' } } as Session));
-    await screen.findByText('0 XP'); expect(screen.queryByText('400 XP')).toBeNull();
+    await screen.findByTitle(/^0 XP ·/); expect(screen.queryByTitle(/^400 XP ·/)).toBeNull();
     await act(async () => notify('SIGNED_OUT', null)); await screen.findByText('Connexion');
     view.unmount(); expect(unsubscribe).toHaveBeenCalled();
   });
