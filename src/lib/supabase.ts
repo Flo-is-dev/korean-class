@@ -4,8 +4,8 @@ import type { Database } from './database.types';
 
 // Publishable values, protected by the existing server-side RLS policies.
 export const supabase = createClient<Database>(
-  import.meta.env.VITE_SUPABASE_URL || 'https://mdicfesvrrnbwnyslnir.supabase.co',
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_XVzEwk-V4X6sfCT2mSzzjw_cEZQvJiV',
+  import.meta.env.VITE_SUPABASE_URL || 'https://drmbmogzkeczrylymhtb.supabase.co',
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_xMASBLY6tNgw29ooyMdevQ_HeETAxVY',
   { auth: { flowType: 'pkce', detectSessionInUrl: true, persistSession: true } },
 );
 export async function loadBooks(): Promise<Book[]> {
