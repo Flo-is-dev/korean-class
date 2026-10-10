@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { buildCards, isError, normalize, recordAnswer } from './cards';
+import { buildCards, choicesFor, isError, normalize, recordAnswer } from './cards';
 import { emptyGame, formatTime, rankScores, rewardSession, streakDays } from './game';
 import { loadGame, loadSettings, saveGame } from './storage';
 import { ProgressQueue } from './progress-queue';
@@ -23,6 +23,16 @@ describe('cards and progress', () => {
     const card = buildCards([row({ category: 'numbers', word_type: null, ko: '하나', short_form: '한' })])[0];
     expect(card.accepted.has('한')).toBe(true);
     expect(normalize(' 먹다! '.normalize('NFD'))).toBe('먹다');
+  });
+  it('builds unique multiple-choice options from the same category, never offering another accepted answer', () => {
+    const cards = buildCards([row(), row({ id: '2', ko: '드시다' }), row({ id: '3', fr: 'Boire', ko: '마시다' }), row({ id: '4', fr: 'Aller', ko: '가다' }), row({ id: '5', fr: 'Venir', ko: '오다' }), row({ id: '6', fr: 'Dormir', ko: '자다' }), row({ id: '7', category: 'colors', word_type: null, fr: 'Rouge', ko: '빨간색' })]);
+    for (let attempt = 0; attempt < 25; attempt++) {
+      const choices = choicesFor(cards[0], cards);
+      expect(choices).toHaveLength(4); expect(new Set(choices).size).toBe(4); expect(choices).toContain('먹다');
+      expect(choices).not.toContain('드시다'); expect(choices).not.toContain('빨간색');
+    }
+    expect(choicesFor(cards[0], cards.slice(0, 3)).sort()).toEqual(['마시다', '먹다']);
+    expect(choicesFor(cards[6], cards)).toHaveLength(4);
   });
   it('requires two consecutive correct answers to leave the error list', () => {
     const first = recordAnswer(undefined, false);
@@ -63,6 +73,8 @@ describe('legacy storage compatibility', () => {
     saveGame('account-a', game);
     expect(loadSettings()).toMatchObject({ cats: ['verbs'], size: 20, mode: 'type' });
     expect(loadGame('account-a').xp).toBe(55); expect(loadGame('account-b').xp).toBe(0);
+    localStorage.setItem('cahier-coreen:prefs', JSON.stringify({ mode: 'mcq' })); expect(loadSettings().mode).toBe('mcq');
+    localStorage.setItem('cahier-coreen:prefs', JSON.stringify({ mode: 'other' })); expect(loadSettings().mode).toBe('flash');
   });
   it('ignores corrupt fields and malformed JSON', () => {
     localStorage.setItem('haru:game:a', JSON.stringify({ xp: -1, days: 2, scores: [{ correct: 1 }], daily: { bad: 'value' } }));

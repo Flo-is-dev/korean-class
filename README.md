@@ -45,22 +45,28 @@ cartes restent dans le même projet Supabase, avec les mêmes règles RLS.
 - Icônes SVG maison (`components/Icon.tsx`) à la place des emoji : aplats, contour
   encre et ombre décalée, comme les boutons.
 - Réglages : page à part, ouverte par l’icône utilisateur de l’en-tête, avec le
-  compte et la déconnexion. Polices coréennes Standard, Carrée et Manuscrite avec
+  compte et la déconnexion. L’ouvrir pendant une série ne l’interrompt pas : la
+  série est mise en pause (chronos compris) et reprend au retour. Polices coréennes Standard, Carrée et Manuscrite avec
   aperçus, mode sombre et sons (interrupteurs à icône) : « Sons » coupe tout, « Effets
   sonores » et « Musique d’ambiance » se règlent séparément. Application locale avant le premier rendu, puis
   lecture de `user_settings` après connexion (les valeurs serveur font foi).
   Une ligne absente utilise Standard et le thème clair. Les changements sont
   sauvegardés après 500 ms ; un échec affiche « Réglage non synchronisé »
   sans annuler le choix. Sur la page de connexion, seul le cache local est utilisé.
-- Entraînement : catégories, flashcards compactes qui se retournent au clic, saisie
-  en hangul, raccourcis clavier, variantes de réponses et révision des erreurs.
+- Entraînement : catégories choisies dans un sélecteur multiple compact, et trois modes au choix. Flashcards compactes qui se
+  retournent au clic, QCM à 4 propositions (les mauvaises réponses viennent d’abord
+  de la même catégorie) ou saisie en hangul. Raccourcis clavier, variantes de
+  réponses et révision des erreurs.
 - Chinois : quand une carte a un mot chinois de même origine (`zh_hanzi`), il
   s’affiche à côté du coréen ; un clic sur les caractères ouvre une bulle avec le
   pinyin et la note. Dans « Mes mots », le pinyin est affiché directement.
 - Sons : effets générés en Web Audio (carte retournée, validation, bonne ou
-  mauvaise réponse, fin de série) et musique d’ambiance générative, sans fichier audio.
+  mauvaise réponse, tic-tac du chrono, fin de série) et trois musiques d’ambiance
+  au choix dans les réglages (douce, rythmée, coréenne traditionnelle), sans fichier audio.
 - Chrono : 10, 20 ou 50 mots tirés au sort dans une catégorie, ou sélection
-  manuelle. Les doublons identiques sont regroupés dans les quiz.
+  manuelle, toujours en QCM. Chaque question dure 10 secondes au plus, avec un
+  tic-tac sur les 5 dernières ; passé ce délai, elle est comptée fausse.
+  Les doublons identiques sont regroupés dans les quiz.
 - Bibliothèque : catalogue complet paginé côté API, recherche français/coréen,
   filtres, sélection multiple persistante entre les onglets. Le filtre Livre
   utilise le catalogue Supabase `books`, trié par `sort_order`, avec des compteurs
@@ -74,7 +80,7 @@ cartes restent dans le même projet Supabase, avec les mêmes règles RLS.
   sélections manuelles séparées des tirages aléatoires.
 - XP, niveaux, série de jours actifs, objectif quotidien et badges.
 
-Le chrono commence au lancement et s’arrête à la dernière réponse. Il continue
+Le chrono global part de zéro au lancement et s’arrête à la dernière réponse. Il continue
 pendant les corrections. Chaque erreur ajoute 5 secondes ; le classement
 privilégie les bonnes réponses, puis le temps avec pénalités. Les séries
 interrompues ne rapportent ni score ni XP. « J’avais bon » est disponible

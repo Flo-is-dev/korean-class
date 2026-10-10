@@ -30,7 +30,7 @@ function UserWorkspace({ user }: { user: User }) {
 
 function Guest({ loading, error }: { loading: boolean; error: string }) {
   const [settings, setSettings] = useState(false);
-  return <><Header onHome={() => setSettings(false)} onSettings={() => setSettings(true)} settings={settings} /><main id="view">{settings ? <SettingsPage onBack={() => setSettings(false)} /> : loading ? <section className="panel"><p className="loading" role="status">Chargement…</p></section> : <AuthPage initialError={error} />}</main></>;
+  return <><Header onHome={() => setSettings(false)} onSettings={() => setSettings(true)} settings={settings} /><main id="view">{settings ? <SettingsPage onBack={() => setSettings(false)} backLabel="Retour à la connexion" /> : loading ? <section className="panel"><p className="loading" role="status">Chargement…</p></section> : <AuthPage initialError={error} />}</main></>;
 }
 
 export default function App() {

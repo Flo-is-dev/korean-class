@@ -71,7 +71,7 @@ export function AppearanceSettings({ children }: { children?: ReactNode }) {
       <legend>Police coréenne</legend>
       <div className="font-options">{KOREAN_FONTS.map(font => <label key={font.value} className="font-option">
         <input type="radio" name="ko-font" value={font.value} checked={value.ko_font === font.value} onChange={() => change({ ko_font: font.value })} />
-        <span>{font.label}</span><span className="font-preview" lang="ko" data-ko-font={font.value}>한국어 공부</span>
+        <span>{font.label}</span><span className="font-preview" lang="ko" data-ko-font={font.value}>한글</span>
       </label>)}</div>
     </fieldset>
     <div className="toggles">

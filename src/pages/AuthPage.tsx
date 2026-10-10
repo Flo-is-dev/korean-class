@@ -36,7 +36,7 @@ export function AuthPage({ initialError = '' }: { initialError?: string }) {
   function submit(event: FormEvent) { event.preventDefault(); void authenticate('login'); }
   return <>
     <section className="panel">
-      <h2>Connexion</h2><p className="note">Connecte-toi pour retrouver tes cartes et tes erreurs sur tous tes appareils.</p>
+      <h2>Connexion</h2>
       <button className="btn google" disabled={busy} onClick={() => void authenticate('google')}>Continuer avec Google</button>
       <div className="divider" role="separator"><span>ou avec ton e-mail</span></div>
       <form className="auth-form" onSubmit={submit}>

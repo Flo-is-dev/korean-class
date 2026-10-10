@@ -1,7 +1,7 @@
 import type { Game, QuizResult, Score } from '../types';
 
 export const today = () => new Date().toLocaleDateString('sv-SE');
-export const emptyGame = (): Game => ({ xp: 0, days: [], scores: [], sound: true, effects: true, music: true, daily: {} });
+export const emptyGame = (): Game => ({ xp: 0, days: [], scores: [], sound: true, effects: true, music: true, track: 'calm', daily: {} });
 export function formatTime(seconds: number) {
   const tenths = Math.round(Math.max(0, seconds) * 10);
   return `${Math.floor(tenths / 600)}:${((tenths % 600) / 10).toFixed(1).padStart(4, '0')}`;

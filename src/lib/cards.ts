@@ -47,6 +47,18 @@ export const cardPool = (cards: Card[], settings: Settings, stats: Stats) => car
 export function recordAnswer(previous: Progress | undefined, ok: boolean): Progress {
   return { right: (previous?.right ?? 0) + Number(ok), wrong: (previous?.wrong ?? 0) + Number(!ok), streak: ok ? (previous?.streak ?? 0) + 1 : 0, last: Date.now() };
 }
+// Multiple choice: the answer and up to three other Korean words, taken from the card's own category first.
+export function choicesFor(card: Card, pool: Card[], count = 4): string[] {
+  const taken = new Set(card.accepted);
+  const distractors: string[] = [];
+  for (const other of [...shuffle(pool.filter(other => other.cat === card.cat)), ...shuffle(pool.filter(other => other.cat !== card.cat))]) {
+    if (distractors.length === count - 1) break;
+    const key = normalize(other.back);
+    if (taken.has(key)) continue;
+    taken.add(key); distractors.push(other.back);
+  }
+  return shuffle([card.back, ...distractors]);
+}
 export function shuffle<T>(items: T[]): T[] {
   const result = [...items];
   for (let i = result.length - 1; i > 0; i--) {

@@ -28,7 +28,7 @@ export function loadSettings(): Settings {
     const saved: unknown = JSON.parse(localStorage.getItem(prefsKey) ?? 'null');
     if (!isObject(saved)) return fallback;
     const cats = Array.isArray(saved.cats) ? saved.cats.filter(isCategory) : [];
-    return { cats: cats.length ? cats : fallback.cats, size: typeof saved.size === 'number' && SIZES.includes(saved.size) ? saved.size : 20, mode: saved.mode === 'type' ? 'type' : 'flash', errorsOnly: false };
+    return { cats: cats.length ? cats : fallback.cats, size: typeof saved.size === 'number' && SIZES.includes(saved.size) ? saved.size : 20, mode: saved.mode === 'type' || saved.mode === 'mcq' ? saved.mode : 'flash', errorsOnly: false };
   } catch { return fallback; }
 }
 export function loadGame(userId: string): Game {
@@ -41,6 +41,7 @@ export function loadGame(userId: string): Game {
       sound: typeof saved.sound === 'boolean' ? saved.sound : true,
       effects: typeof saved.effects === 'boolean' ? saved.effects : true,
       music: typeof saved.music === 'boolean' ? saved.music : true,
+      track: saved.track === 'rhythm' || saved.track === 'korean' ? saved.track : 'calm',
       daily: isObject(saved.daily) ? Object.fromEntries(Object.entries(saved.daily).filter((entry): entry is [string, number] => nonNegative(entry[1]))) : {},
     };
   } catch { return emptyGame(); }

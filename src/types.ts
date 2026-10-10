@@ -1,6 +1,6 @@
 export type Category = 'vocab' | 'verbs' | 'adjectives' | 'colors' | 'numbers' | 'classifiers' | 'interrogatives' | 'grammar';
-export type Mode = 'flash' | 'type';
-export type Page = 'learn' | 'chrono' | 'words' | 'scores' | 'settings';
+export type Mode = 'flash' | 'mcq' | 'type';
+export type Page = 'learn' | 'chrono' | 'words' | 'scores';
 export interface Book { code: string; label: string }
 export type BookFilter = 'all' | 'none' | `book:${string}`;
 export interface CardRow {
@@ -43,8 +43,9 @@ export interface Score {
   adjusted: number;
   custom: boolean;
 }
-export interface Game { xp: number; days: string[]; scores: Score[]; sound: boolean; effects: boolean; music: boolean; daily: Record<string, number> }
-export type AudioPrefs = Pick<Game, 'sound' | 'effects' | 'music'>;
+export interface Game { xp: number; days: string[]; scores: Score[]; sound: boolean; effects: boolean; music: boolean; track: MusicTrack; daily: Record<string, number> }
+export type MusicTrack = 'calm' | 'rhythm' | 'korean';
+export type AudioPrefs = Pick<Game, 'sound' | 'effects' | 'music' | 'track'>;
 export interface QuizRun { id: number; cards: Card[]; mode: Mode; timed: boolean; custom: boolean }
 export interface Answer { card: Card; ok: boolean; typed?: string }
 export interface QuizResult { run: QuizRun; answers: Answer[]; seconds: number; completed: boolean }

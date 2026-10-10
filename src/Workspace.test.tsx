@@ -1,5 +1,5 @@
 import { StrictMode } from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { User } from '@supabase/supabase-js';
 import { Workspace } from './Workspace';
@@ -58,11 +58,40 @@ describe('React workspace', () => {
     render(<AppearanceProvider userId={null}><Workspace user={{ id: 'test-user', email: 'test@example.test' } as User} books={[]} initialRows={rows} initialStats={{}} admin /></AppearanceProvider>);
     expect(screen.queryByRole('switch', { name: 'Mode sombre' })).toBeNull(); expect(screen.queryByRole('button', { name: 'Se déconnecter' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Réglages' }));
-    expect(screen.getByRole('heading', { name: 'Réglages' })).toBeDefined(); expect(screen.getByRole('switch', { name: 'Mode sombre' })).toBeDefined();
+    expect(screen.getByRole('heading', { name: 'Préférences' })).toBeDefined(); expect(screen.getByRole('switch', { name: 'Mode sombre' })).toBeDefined();
     expect(screen.getByText('test@example.test')).toBeDefined(); expect(within(screen.getByRole('navigation')).queryByRole('button', { current: 'page' })).toBeNull();
     go('Apprendre'); expect(screen.queryByRole('switch', { name: 'Mode sombre' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Réglages' })); fireEvent.click(screen.getByRole('button', { name: 'Se déconnecter' }));
     await waitFor(() => expect(api.signOut).toHaveBeenCalled());
+  });
+  it('opens the settings in the middle of a chrono without ending it, and pauses both clocks meanwhile', () => {
+    vi.useFakeTimers(); let now = 1000; vi.spyOn(performance, 'now').mockImplementation(() => now);
+    const at = (time: number) => { now = time; act(() => vi.advanceTimersByTime(100)); };
+    const clocks = () => [screen.getByRole('timer', { name: 'Temps écoulé' }).textContent, screen.getByRole('timer', { name: 'Temps restant pour cette question' }).textContent];
+    render(<AppearanceProvider userId={null}><Workspace user={{ id: 'test-user', email: 'test@example.test' } as User} books={[]} initialRows={rows} initialStats={{}} admin /></AppearanceProvider>);
+    go('Chrono'); fireEvent.click(screen.getByRole('button', { name: 'C’est parti · 2 mots' }));
+    at(4000); expect(clocks()).toEqual(['0:03.0', '7 s']);
+    fireEvent.click(screen.getByRole('button', { name: 'Réglages' }));
+    expect(window.confirm).not.toHaveBeenCalled(); expect(screen.queryByRole('timer')).toBeNull();
+    fireEvent.click(screen.getByRole('switch', { name: 'Mode sombre' })); expect(document.documentElement.dataset.theme).toBe('dark');
+    at(64000); fireEvent.keyDown(document, { key: '1' }); expect(api.saveProgress).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Reprendre la série' }));
+    expect(screen.getByText('1 / 2')).toBeDefined(); expect(document.querySelector('.choice:disabled')).toBeNull();
+    act(() => vi.advanceTimersByTime(100)); expect(clocks()).toEqual(['0:03.0', '7 s']);
+    at(65000); expect(clocks()).toEqual(['0:04.0', '6 s']);
+    fireEvent.click(screen.getByRole('button', { name: 'Réglages' })); fireEvent.click(screen.getByRole('switch', { name: 'Mode sombre' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Réglages' })); expect(screen.getByText('1 / 2')).toBeDefined();
+    vi.useRealTimers();
+  });
+  it('picks categories from a compact multi-select that always keeps one selected', () => {
+    setup();
+    const trigger = screen.getByRole('button', { name: /^Catégories/ });
+    expect(trigger.textContent).toBe('Vocabulaire1'); expect(screen.queryByRole('listbox')).toBeNull();
+    fireEvent.click(trigger); fireEvent.click(screen.getByRole('option', { name: /Verbes/ }));
+    expect(trigger.textContent).toBe('Vocabulaire, Verbes3'); expect(screen.getByRole('button', { name: 'Commencer · 3 cartes' })).toBeDefined();
+    fireEvent.click(screen.getByRole('option', { name: /Vocabulaire/ })); fireEvent.click(screen.getByRole('option', { name: /Verbes/ }));
+    expect(screen.getByRole('option', { name: /Verbes/ }).getAttribute('aria-selected')).toBe('true'); expect(screen.getByRole('button', { name: 'Commencer · 2 cartes' })).toBeDefined();
+    fireEvent.keyDown(document, { key: 'Escape' }); expect(screen.queryByRole('listbox')).toBeNull(); expect(trigger.textContent).toBe('Verbes2');
   });
   it('shows the level in the header, only the three scores in the game bar, and the sound switch in settings', () => {
     const view = render(<AppearanceProvider userId={null}><Workspace user={{ id: 'test-user', email: 'test@example.test' } as User} books={[]} initialRows={rows} initialStats={{}} admin /></AppearanceProvider>);
@@ -71,13 +100,16 @@ describe('React workspace', () => {
     expect(screen.queryByRole('switch', { name: 'Sons' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Réglages' }));
     const saved = () => JSON.parse(localStorage.getItem('haru:game:test-user')!);
-    expect(screen.getByRole('switch', { name: 'Sons' }).getAttribute('aria-checked')).toBe('true'); expect(vi.mocked(setMusic)).toHaveBeenLastCalledWith(true);
+    expect(screen.getByRole('switch', { name: 'Sons' }).getAttribute('aria-checked')).toBe('true'); expect(vi.mocked(setMusic)).toHaveBeenLastCalledWith('calm');
+    fireEvent.click(screen.getByRole('button', { name: 'Coréenne' }));
+    expect(saved().track).toBe('korean'); expect(vi.mocked(setMusic)).toHaveBeenLastCalledWith('korean'); expect(screen.getByRole('button', { name: 'Coréenne' }).getAttribute('aria-pressed')).toBe('true');
     fireEvent.click(screen.getByRole('switch', { name: 'Musique d’ambiance' }));
-    expect(saved()).toMatchObject({ sound: true, effects: true, music: false }); expect(vi.mocked(setMusic)).toHaveBeenLastCalledWith(false);
-    fireEvent.click(screen.getByRole('switch', { name: 'Musique d’ambiance' })); expect(vi.mocked(setMusic)).toHaveBeenLastCalledWith(true);
+    expect(saved()).toMatchObject({ sound: true, effects: true, music: false }); expect(vi.mocked(setMusic)).toHaveBeenLastCalledWith(null);
+    expect((screen.getByRole('button', { name: 'Rythmée' }) as HTMLButtonElement).matches(':disabled')).toBe(true);
+    fireEvent.click(screen.getByRole('switch', { name: 'Musique d’ambiance' })); expect(vi.mocked(setMusic)).toHaveBeenLastCalledWith('korean');
     fireEvent.click(screen.getByRole('switch', { name: 'Sons' }));
     expect(screen.getByRole('switch', { name: 'Sons' }).getAttribute('aria-checked')).toBe('false'); expect(screen.getByText('Tout est coupé')).toBeDefined();
-    expect(saved()).toMatchObject({ sound: false, effects: true, music: true }); expect(vi.mocked(setMusic)).toHaveBeenLastCalledWith(false);
+    expect(saved()).toMatchObject({ sound: false, effects: true, music: true, track: 'korean' }); expect(vi.mocked(setMusic)).toHaveBeenLastCalledWith(null);
     for (const name of ['Effets sonores', 'Musique d’ambiance']) expect(screen.getByRole('switch', { name })).toMatchObject({ disabled: true, ariaChecked: 'false' });
   });
   it('lists the Chinese cognate with its pinyin next to the Korean word', () => {
@@ -92,8 +124,8 @@ describe('React workspace', () => {
     screen.getAllByRole('checkbox', { name: 'Sélectionner Manger' }).forEach(box => fireEvent.click(box));
     fireEvent.click(screen.getByRole('button', { name: 'Chrono avec la sélection' }));
     expect(screen.getByText('1 / 1')).toBeDefined();
-    fireEvent.change(screen.getByRole('textbox'), { target: { value: '먹다' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Vérifier' }));
+    expect(screen.queryByRole('textbox')).toBeNull(); expect(screen.getByRole('timer', { name: 'Temps restant pour cette question' }).textContent).toBe('10 s');
+    fireEvent.click(screen.getByRole('button', { name: /먹다$/ }));
     fireEvent.click(screen.getByRole('button', { name: /Voir le résultat/ }));
     await screen.findByText('Défi chrono terminé !');
     const game = JSON.parse(localStorage.getItem('haru:game:test-user')!);
@@ -107,9 +139,9 @@ describe('React workspace', () => {
     setup(); go('Chrono');
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('quota'); });
     fireEvent.click(screen.getByRole('button', { name: 'C’est parti · 2 mots' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Je ne sais pas' }));
+    fireEvent.click(document.querySelector('.choice')!);
     fireEvent.click(screen.getByRole('button', { name: /Carte suivante/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Je ne sais pas' }));
+    fireEvent.click(document.querySelector('.choice')!);
     fireEvent.click(screen.getByRole('button', { name: /Voir le résultat/ }));
     await screen.findByText(/Stockage du navigateur indisponible/);
     expect(screen.getByText('Défi chrono terminé !')).toBeDefined();
