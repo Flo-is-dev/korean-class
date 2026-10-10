@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Answer, Progress, QuizResult, QuizRun } from '../types';
 import { categoryName, normalize } from '../lib/cards';
 import { formatTime } from '../lib/game';
+import { Icon } from '../components/Icon';
 
 export function QuizPage({ run, onAnswer, onOverride, onFinish }: {
   run: QuizRun; onAnswer: (id: string, ok: boolean) => Progress | undefined; onOverride: (id: string, previous: Progress | undefined) => void; onFinish: (result: QuizResult) => void;
@@ -75,7 +76,7 @@ export function QuizPage({ run, onAnswer, onOverride, onFinish }: {
     return () => document.removeEventListener('keydown', keydown);
   });
   return <>
-    {run.timed && <div className="live-clock" role="timer" aria-label="Temps écoulé">⏱ {formatTime(elapsed)}</div>}
+    {run.timed && <div className="live-clock" role="timer" aria-label="Temps écoulé"><Icon name="stopwatch" size={28} />{formatTime(elapsed)}</div>}
     <div className="field quiz-layout">
       <div className="progress"><span>{index + 1} / {run.cards.length}</span><div className="bar" role="progressbar" aria-label="Avancement de la série" aria-valuemin={0} aria-valuemax={run.cards.length} aria-valuenow={results.current.length}><i style={{ width: `${results.current.length / run.cards.length * 100}%` }} /></div><button className="btn link" onClick={finish}>Terminer</button></div>
       <div className={`card ${revealed ? 'flipped' : ''}`} aria-live="polite"><div className="card-inner">

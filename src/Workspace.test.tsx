@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { User } from '@supabase/supabase-js';
 import { Workspace } from './Workspace';
+import { AppearanceProvider } from './components/AppearanceSettings';
 import type { CardRow } from './types';
 
 const api = vi.hoisted(() => ({ deleteCards: vi.fn(), saveProgress: vi.fn(), signOut: vi.fn() }));
@@ -50,6 +51,28 @@ describe('React workspace', () => {
     setup(false); go('Mes mots'); fireEvent.click(screen.getByRole('checkbox', { name: 'Sélectionner Boire' }));
     expect((screen.getByRole('button', { name: 'Supprimer la sélection' }) as HTMLButtonElement).disabled).toBe(true);
     expect(api.deleteCards).not.toHaveBeenCalled();
+  });
+  it('opens settings and sign-out on their own page from the user button, away from the other pages', async () => {
+    api.signOut.mockResolvedValue({ error: null });
+    render(<AppearanceProvider userId={null}><Workspace user={{ id: 'test-user', email: 'test@example.test' } as User} books={[]} initialRows={rows} initialStats={{}} admin /></AppearanceProvider>);
+    expect(screen.queryByRole('switch', { name: 'Mode sombre' })).toBeNull(); expect(screen.queryByRole('button', { name: 'Se déconnecter' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Réglages' }));
+    expect(screen.getByRole('heading', { name: 'Réglages' })).toBeDefined(); expect(screen.getByRole('switch', { name: 'Mode sombre' })).toBeDefined();
+    expect(screen.getByText('test@example.test')).toBeDefined(); expect(within(screen.getByRole('navigation')).queryByRole('button', { current: 'page' })).toBeNull();
+    go('Apprendre'); expect(screen.queryByRole('switch', { name: 'Mode sombre' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Réglages' })); fireEvent.click(screen.getByRole('button', { name: 'Se déconnecter' }));
+    await waitFor(() => expect(api.signOut).toHaveBeenCalled());
+  });
+  it('shows the level in the header, only the three scores in the game bar, and the sound switch in settings', () => {
+    const view = render(<AppearanceProvider userId={null}><Workspace user={{ id: 'test-user', email: 'test@example.test' } as User} books={[]} initialRows={rows} initialStats={{}} admin /></AppearanceProvider>);
+    expect(within(screen.getByRole('banner')).getByText('Niveau 1 · 200 XP avant le suivant')).toBeDefined();
+    expect([...view.container.querySelector('.game-bar')!.children].map(child => child.textContent)).toEqual(['0 XP', '0 jours', '0/20 aujourd’hui']);
+    expect(screen.queryByRole('switch', { name: 'Sons' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Réglages' }));
+    expect(screen.getByRole('switch', { name: 'Sons' }).getAttribute('aria-checked')).toBe('true'); expect(screen.getByText('Activés')).toBeDefined();
+    fireEvent.click(screen.getByRole('switch', { name: 'Sons' }));
+    expect(screen.getByRole('switch', { name: 'Sons' }).getAttribute('aria-checked')).toBe('false'); expect(screen.getByText('Coupés')).toBeDefined();
+    expect(JSON.parse(localStorage.getItem('haru:game:test-user')!).sound).toBe(false);
   });
   it('runs a manually selected chrono and stores one score and one reward in StrictMode', async () => {
     setup(); go('Mes mots');

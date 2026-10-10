@@ -13,7 +13,6 @@ const defaults: Appearance = { ko_font: 'standard', theme: 'light' };
 async function setup(userId: string | null = null) {
   const view = render(<AppearanceProvider key={userId} userId={userId}><AppearanceSettings /></AppearanceProvider>);
   await act(async () => {});
-  fireEvent.click(screen.getByText('Réglages'));
   return view;
 }
 beforeEach(() => {
@@ -42,7 +41,9 @@ describe('appearance settings', () => {
   it('applies radio and switch changes immediately for guests without network writes', async () => {
     await setup();
     fireEvent.click(screen.getByRole('radio', { name: /Carrée/ }));
+    expect(screen.getByRole('switch', { name: 'Mode sombre' }).getAttribute('aria-checked')).toBe('false');
     fireEvent.click(screen.getByRole('switch', { name: 'Mode sombre' }));
+    expect(screen.getByRole('switch', { name: 'Mode sombre' }).getAttribute('aria-checked')).toBe('true');
     expect(document.documentElement.dataset).toMatchObject({ koFont: 'square', theme: 'dark' });
     expect(readLocalAppearance()).toEqual({ ko_font: 'square', theme: 'dark' });
     expect(api.loadAppearance).not.toHaveBeenCalled(); expect(api.saveAppearance).not.toHaveBeenCalled();
@@ -103,7 +104,6 @@ describe('appearance settings', () => {
     const cards = buildCards([{ id: '1', category: 'vocab', word_type: null, ko: '학교', fr: 'École', book: null, lesson: null, short_form: null }]);
     const onAnswer = vi.fn();
     render(<AppearanceProvider userId={null}><QuizPage run={{ id: 1, cards, mode: 'flash', timed: false, custom: false }} onAnswer={onAnswer} onOverride={() => {}} onFinish={() => {}} /><AppearanceSettings /></AppearanceProvider>);
-    fireEvent.click(screen.getByText('Réglages'));
     fireEvent.keyDown(screen.getByRole('switch'), { key: ' ' });
     fireEvent.keyDown(screen.getByRole('radio', { name: /Carrée/ }), { key: '2' });
     expect(screen.getByRole('button', { name: /Retourner la carte/ })).toBeDefined();
@@ -114,7 +114,7 @@ describe('appearance settings', () => {
     const onAnswer = vi.fn();
     render(<AppearanceProvider userId={null}><QuizPage run={{ id: 1, cards, mode: 'type', timed: false, custom: false }} onAnswer={onAnswer} onOverride={() => {}} onFinish={() => {}} /><AppearanceSettings /></AppearanceProvider>);
     fireEvent.change(screen.getByRole('textbox'), { target: { value: '학' } });
-    fireEvent.click(screen.getByText('Réglages')); fireEvent.click(screen.getByRole('radio', { name: /Manuscrite/ }));
+    fireEvent.click(screen.getByRole('radio', { name: /Manuscrite/ }));
     fireEvent.click(screen.getByRole('switch', { name: 'Mode sombre' }));
     expect((screen.getByRole('textbox') as HTMLInputElement).value).toBe('학'); expect(screen.getByText('1 / 1')).toBeDefined(); expect(onAnswer).not.toHaveBeenCalled();
   });

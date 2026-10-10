@@ -43,6 +43,14 @@ describe('authentication and account lifecycle', () => {
     expect(auth.signInWithPassword).toHaveBeenCalledWith({ email: 'test@example.test', password: 'password' });
     expect((screen.getByRole('button', { name: 'Se connecter' }) as HTMLButtonElement).disabled).toBe(false);
   });
+  it('lets a guest open the settings page from the user button and return to the login form', async () => {
+    render(<App />); await screen.findByText('Connexion');
+    expect(screen.queryByRole('switch', { name: 'Mode sombre' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Réglages' }));
+    expect(screen.getByRole('switch', { name: 'Mode sombre' })).toBeDefined(); expect(screen.queryByText('Connexion')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Se déconnecter' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Retour à la connexion' })); expect(screen.getByText('Connexion')).toBeDefined();
+  });
   it('supports registration and Google redirects', async () => {
     render(<App />);
     fireEvent.change(await screen.findByLabelText('E-mail'), { target: { value: 'test@example.test' } });
@@ -57,9 +65,9 @@ describe('authentication and account lifecycle', () => {
     localStorage.setItem('haru:game:first', JSON.stringify({ xp: 400, days: [], scores: [], sound: false, daily: {} }));
     const view = render(<App />); await screen.findByText('Connexion');
     await act(async () => notify('SIGNED_IN', { user: { id: 'first', email: 'first@example.test' } } as Session));
-    await screen.findByText('⚡ 400 XP');
+    await screen.findByText('400 XP');
     await act(async () => notify('SIGNED_IN', { user: { id: 'second', email: 'second@example.test' } } as Session));
-    await screen.findByText('⚡ 0 XP'); expect(screen.queryByText('⚡ 400 XP')).toBeNull();
+    await screen.findByText('0 XP'); expect(screen.queryByText('400 XP')).toBeNull();
     await act(async () => notify('SIGNED_OUT', null)); await screen.findByText('Connexion');
     view.unmount(); expect(unsubscribe).toHaveBeenCalled();
   });

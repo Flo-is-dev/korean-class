@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { applyAppearance, KOREAN_FONTS, readLocalAppearance, writeLocalAppearance } from '../lib/appearance';
 import type { Appearance } from '../lib/appearance';
 import { loadAppearance, saveAppearance } from '../lib/appearance-api';
+import { IconToggle, MoonIcon, SunIcon } from './IconToggle';
 
 interface AppearanceContextValue {
   value: Appearance;
@@ -60,23 +61,24 @@ export function AppearanceProvider({ userId, children }: { userId: string | null
   return <AppearanceContext.Provider value={{ value, ready, notSynced, change }}>{children}</AppearanceContext.Provider>;
 }
 
-export function AppearanceSettings() {
+export function AppearanceSettings({ children }: { children?: ReactNode }) {
   const context = useContext(AppearanceContext);
   if (!context) return null;
   const { value, ready, notSynced, change } = context;
-  return <details className="panel appearance-settings" onKeyDown={event => event.stopPropagation()}>
-    <summary>Réglages</summary>
-    <div className="appearance-content">
-      <fieldset className="field" disabled={!ready}>
-        <legend>Police coréenne</legend>
-        <div className="font-options">{KOREAN_FONTS.map(font => <label key={font.value} className="font-option">
-          <input type="radio" name="ko-font" value={font.value} checked={value.ko_font === font.value} onChange={() => change({ ko_font: font.value })} />
-          <span>{font.label}</span><span className="font-preview" lang="ko" data-ko-font={font.value}>한국어 공부</span>
-        </label>)}</div>
-      </fieldset>
-      <label className="toggle"><span><strong>Mode sombre</strong></span><input type="checkbox" role="switch" checked={value.theme === 'dark'} disabled={!ready} onChange={event => change({ theme: event.target.checked ? 'dark' : 'light' })} /></label>
-      {!ready && <p className="note" role="status">Chargement des réglages…</p>}
-      {notSynced && <p className="note settings-sync" role="status">Réglage non synchronisé</p>}
+  const dark = value.theme === 'dark';
+  return <div className="appearance-content" onKeyDown={event => event.stopPropagation()}>
+    <fieldset className="field" disabled={!ready}>
+      <legend>Police coréenne</legend>
+      <div className="font-options">{KOREAN_FONTS.map(font => <label key={font.value} className="font-option">
+        <input type="radio" name="ko-font" value={font.value} checked={value.ko_font === font.value} onChange={() => change({ ko_font: font.value })} />
+        <span>{font.label}</span><span className="font-preview" lang="ko" data-ko-font={font.value}>한국어 공부</span>
+      </label>)}</div>
+    </fieldset>
+    <div className="toggles">
+      <IconToggle label="Mode sombre" state={dark ? 'Activé' : 'Désactivé'} checked={dark} disabled={!ready} onChange={checked => change({ theme: checked ? 'dark' : 'light' })}>{dark ? <MoonIcon /> : <SunIcon />}</IconToggle>
+      {children}
     </div>
-  </details>;
+    {!ready && <p className="note" role="status">Chargement des réglages…</p>}
+    {notSynced && <p className="note settings-sync" role="status">Réglage non synchronisé</p>}
+  </div>;
 }

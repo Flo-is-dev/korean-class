@@ -40,9 +40,13 @@ cartes restent dans le même projet Supabase, avec les mêmes règles RLS.
 
 ## Fonctionnalités conservées
 
-- Mode clair, design responsive, mascotte tigre et sons désactivables.
-- Section Réglages : polices coréennes Standard, Carrée et Manuscrite avec
-  aperçus, et mode sombre. Application locale avant le premier rendu, puis
+- Design Pop responsive : fond crème, accents violet/pêche/jaune, contours francs et ombres décalées ; variante sombre assortie, mascotte tigre et sons désactivables.
+- Typographie DM Sans pour l’interface, Noto Sans KR pour le coréen et Noto Sans SC pour le chinois (chargées via Google Fonts, avec polices système de repli).
+- Icônes SVG maison (`components/Icon.tsx`) à la place des emoji : aplats, contour
+  encre et ombre décalée, comme les boutons.
+- Réglages : page à part, ouverte par l’icône utilisateur de l’en-tête, avec le
+  compte et la déconnexion. Polices coréennes Standard, Carrée et Manuscrite avec
+  aperçus, mode sombre et sons (interrupteurs à icône). Application locale avant le premier rendu, puis
   lecture de `user_settings` après connexion (les valeurs serveur font foi).
   Une ligne absente utilise Standard et le thème clair. Les changements sont
   sauvegardés après 500 ms ; un échec affiche « Réglage non synchronisé »
@@ -93,7 +97,7 @@ src/
   App.tsx              Authentification, chargement et changement de compte
   Workspace.tsx        Navigation et orchestration des fonctionnalités
   components/          En-tête, bannière et sélecteur partagés
-  pages/               Connexion, apprendre, chrono, mots, quiz, résultat, scores
+  pages/               Connexion, apprendre, chrono, mots, quiz, résultat, scores, réglages
   hooks/               Sauvegarde de progression
   lib/                 Cartes, scores, stockage, audio et client Supabase typé
   types.ts             Modèle de données de l’application

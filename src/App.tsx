@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import type { Book, CardRow, Stats } from './types';
 import { Header } from './components/Header';
-import { AppearanceProvider, AppearanceSettings } from './components/AppearanceSettings';
+import { AppearanceProvider } from './components/AppearanceSettings';
 import { AuthPage } from './pages/AuthPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { Workspace } from './Workspace';
 import { errorMessage, isAdmin, loadBooks, loadCards, loadStats, supabase } from './lib/supabase';
 
@@ -27,6 +28,11 @@ function UserWorkspace({ user }: { user: User }) {
   return <><Header /><main id="view"><section className="panel">{error ? <><p className="error" role="alert">{error}</p><button className="btn primary" onClick={() => setAttempt(attempt + 1)}>Réessayer</button><button className="btn link" onClick={() => void supabase.auth.signOut().then(({ error }) => { if (error) setError(error.message); })}>Se déconnecter</button></> : <p className="loading" role="status">Chargement de tes cartes…</p>}</section></main></>;
 }
 
+function Guest({ loading, error }: { loading: boolean; error: string }) {
+  const [settings, setSettings] = useState(false);
+  return <><Header onHome={() => setSettings(false)} onSettings={() => setSettings(true)} settings={settings} /><main id="view">{settings ? <SettingsPage onBack={() => setSettings(false)} /> : loading ? <section className="panel"><p className="loading" role="status">Chargement…</p></section> : <AuthPage initialError={error} />}</main></>;
+}
+
 export default function App() {
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const [error, setError] = useState(() => new URLSearchParams(location.search).get('error_description') || new URLSearchParams(location.hash.slice(1)).get('error_description') || '');
@@ -45,5 +51,5 @@ export default function App() {
     }).catch(failure => { if (active) { setError(errorMessage(failure)); setUser(null); } });
     return () => { active = false; subscription.unsubscribe(); };
   }, []);
-  return <AppearanceProvider key={user?.id ?? 'guest'} userId={user?.id ?? null}><div className="app">{user ? <UserWorkspace key={user.id} user={user} /> : <><Header /><main id="view">{user === undefined ? <section className="panel"><p className="loading" role="status">Chargement…</p></section> : <AuthPage initialError={error} />}</main></>}<AppearanceSettings /></div></AppearanceProvider>;
+  return <AppearanceProvider key={user?.id ?? 'guest'} userId={user?.id ?? null}><div className="app">{user ? <UserWorkspace key={user.id} user={user} /> : <Guest loading={user === undefined} error={error} />}</div></AppearanceProvider>;
 }

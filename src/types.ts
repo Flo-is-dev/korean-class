@@ -1,6 +1,6 @@
 export type Category = 'vocab' | 'verbs' | 'adjectives' | 'colors' | 'numbers' | 'classifiers' | 'interrogatives' | 'grammar';
 export type Mode = 'flash' | 'type';
-export type Page = 'learn' | 'chrono' | 'words' | 'scores';
+export type Page = 'learn' | 'chrono' | 'words' | 'scores' | 'settings';
 export interface Book { code: string; label: string }
 export type BookFilter = 'all' | 'none' | `book:${string}`;
 export interface CardRow {
