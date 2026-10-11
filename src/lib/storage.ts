@@ -1,6 +1,6 @@
 import { CATEGORIES, SIZES } from './cards';
 import { emptyGame } from './game';
-import type { Book, BookFilter, CardRow, Category, Game, Score, Settings } from '../types';
+import type { Book, BookFilter, CardRow, Category, Game, LevelFilter, Score, Settings } from '../types';
 import { validateBookFilter } from './books';
 
 const prefsKey = 'cahier-coreen:prefs';
@@ -11,6 +11,15 @@ export function loadBookFilter(books: Book[] | null, rows: CardRow[]): BookFilte
 }
 export function saveBookFilter(filter: BookFilter) {
   try { localStorage.setItem(bookFilterKey, JSON.stringify(filter)); }
+  catch { /* Filtering remains usable when browser storage is unavailable. */ }
+}
+const levelFilterKey = 'haru:library:level';
+export function loadLevelFilter(): LevelFilter {
+  try { const saved: unknown = JSON.parse(localStorage.getItem(levelFilterKey) ?? 'null'); return typeof saved === 'number' ? saved : 'all'; }
+  catch { return 'all'; }
+}
+export function saveLevelFilter(filter: LevelFilter) {
+  try { localStorage.setItem(levelFilterKey, JSON.stringify(filter)); }
   catch { /* Filtering remains usable when browser storage is unavailable. */ }
 }
 const gameKey = (userId: string) => `haru:game:${userId}`;

@@ -1,15 +1,19 @@
 import { SelectField } from '../components/SelectField';
+import { cardBookOptions, cardMatchesBook } from '../lib/books';
 import { CATEGORIES, shuffle } from '../lib/cards';
-import type { Card, Category } from '../types';
+import { levelOptions, matchesLevel, parseLevelFilter } from '../lib/levels';
+import type { Book, BookFilter, Card, Category, LevelFilter } from '../types';
 
-export function ChronoPage({ cards, category, size, onCategory, onSize, onStart, onChoose }: {
-  cards: Card[]; category: Category; size: number; onCategory: (cat: Category) => void; onSize: (size: number) => void; onStart: (cards: Card[]) => void; onChoose: () => void;
+export function ChronoPage({ books, book, levels, level, cards, category, size, onBook, onLevel, onCategory, onSize, onStart, onChoose }: {
+  books: Book[] | null; book: BookFilter; levels: number[]; level: LevelFilter; cards: Card[]; category: Category; size: number; onBook: (book: BookFilter) => void; onLevel: (level: LevelFilter) => void; onCategory: (cat: Category) => void; onSize: (size: number) => void; onStart: (cards: Card[]) => void; onChoose: () => void;
 }) {
-  const available = cards.filter(card => card.cat === category);
+  const inCategory = cards.filter(card => card.cat === category);
+  const inBook = inCategory.filter(card => cardMatchesBook(card, book));
+  const available = inBook.filter(card => matchesLevel(card, level));
   const count = Math.min(size, available.length);
   return <>
     <section className="panel"><h2>Chrono</h2>
-      <div className="row filters"><SelectField label="Catégorie" value={category} options={CATEGORIES.map(cat => [cat.key, cat.label])} onChange={value => onCategory(value as Category)} /><SelectField label="Nombre de mots" value={size} options={[10, 20, 50].map(n => [n, `${n} mots`])} onChange={value => onSize(Number(value))} /></div>
+      <div className="row filters"><SelectField label="Catégorie" value={category} options={CATEGORIES.map(cat => [cat.key, cat.label])} onChange={value => onCategory(value as Category)} /><SelectField label="Nombre de mots" value={size} options={[10, 20, 50].map(n => [n, `${n} mots`])} onChange={value => onSize(Number(value))} />{books !== null && <SelectField label="Livre" value={book} options={cardBookOptions(books, inCategory.filter(card => matchesLevel(card, level)), cards.some(card => card.books.includes(null)))} onChange={value => onBook(value as BookFilter)} />}{levels.length > 0 && <SelectField label="Niveau" value={level} options={levelOptions(levels, inBook)} onChange={value => onLevel(parseLevelFilter(value))} />}</div>
       <button className="btn primary" disabled={!count} onClick={() => onStart(shuffle(available).slice(0, count))}>C’est parti · {count} mots</button>
       <button className="btn link" onClick={onChoose}>Choisir moi-même les mots →</button>
     </section></>;

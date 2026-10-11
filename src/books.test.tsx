@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { User } from '@supabase/supabase-js';
 import { Workspace } from './Workspace';
@@ -72,6 +72,36 @@ describe('dynamic book filter', () => {
     expect(screen.queryByLabelText('Livre')).toBeNull();
     expect(screen.getByText(/4 mots affichés sur 4/)).toBeDefined();
     expect(loadBookFilter(books, rows)).toBe('book:초급1');
+  });
+  it('filters the learn and chrono pools with the same book', () => {
+    setup(); choose('Livre', 'book:초급1');
+    fireEvent.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Apprendre' }));
+    expect((screen.getByLabelText('Livre') as HTMLSelectElement).value).toBe('book:초급1');
+    expect(screen.getByRole('button', { name: /Commencer · 1 cartes/ })).toBeDefined();
+    choose('Livre', 'all');
+    expect(screen.getByRole('button', { name: /Commencer · 2 cartes/ })).toBeDefined();
+    fireEvent.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Chrono' }));
+    expect(screen.getByRole('button', { name: /C’est parti · 2 mots/ })).toBeDefined();
+    choose('Livre', 'book:초급2');
+    expect(screen.getByRole('button', { name: /C’est parti · 1 mots/ })).toBeDefined();
+  });
+  it('filters every page by estimated level and hides the select without levels', () => {
+    setup(); expect(screen.queryByLabelText('Niveau')).toBeNull();
+    cleanup();
+    setup(books, rows.map(row => ({ ...row, level: row.id === '3' ? 2 : 1 })));
+    expect(within(screen.getByRole('combobox', { name: 'Niveau' })).getAllByRole('option').map(option => option.textContent)).toEqual([
+      'Tous les niveaux (4)', 'TOPIK 1 · débutant (3)', 'TOPIK 2 · débutant (1)',
+    ]);
+    choose('Niveau', '2');
+    expect(screen.getByText(/1 mots affichés sur 4/)).toBeDefined();
+    expect(screen.getByRole('option', { name: '초급1 · Débutant 1 (1)' })).toBeDefined();
+    fireEvent.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Apprendre' }));
+    expect((screen.getByLabelText('Niveau') as HTMLSelectElement).value).toBe('2');
+    expect(screen.getByRole('button', { name: /Commencer · 1 cartes/ })).toBeDefined();
+    fireEvent.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Chrono' }));
+    expect(screen.getByRole('button', { name: /C’est parti · 0 mots/ })).toBeDefined();
+    choose('Niveau', 'all');
+    expect(screen.getByRole('button', { name: /C’est parti · 2 mots/ })).toBeDefined();
   });
   it('keeps the filter usable when localStorage throws on read or write', () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked'); });

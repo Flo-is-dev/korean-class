@@ -88,3 +88,7 @@ grant insert, update, delete on public.cards to authenticated;
 alter table public.cards add column if not exists zh_hanzi text;
 alter table public.cards add column if not exists zh_pinyin text;
 alter table public.cards add column if not exists zh_note text;
+
+-- Migration 04_levels : niveau TOPIK estimé (1 à 6) -------------------------
+alter table public.cards add column if not exists level smallint check (level between 1 and 6);
+create index if not exists cards_level_idx on public.cards (level);

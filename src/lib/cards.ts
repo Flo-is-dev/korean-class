@@ -19,17 +19,20 @@ function variants(ko: string) {
   return [...new Set([ko, withoutParens, ...withoutParens.split(/[\/,=]/), ...Array.from(ko.matchAll(/\(([^)]*)\)/g), match => match[1])])].map(normalize).filter(Boolean);
 }
 export function buildCards(rows: CardRow[]): Card[] {
-  const seen = new Set<string>();
+  const seen = new Map<string, Card>();
   const cards: Card[] = [];
   for (const row of rows) {
     const cat = categoryOf(row);
     const key = `${cat}|${normalize(row.fr)}|${normalize(row.ko)}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    cards.push({ id: row.id, cat, front: row.fr, back: row.ko, tag: lessonTag(row),
+    const duplicate = seen.get(key);
+    // A word taught in several books stays one card that every one of those books can find.
+    if (duplicate) { if (!duplicate.books.includes(row.book)) duplicate.books.push(row.book); continue; }
+    const card: Card = { id: row.id, cat, front: row.fr, back: row.ko, tag: lessonTag(row), books: [row.book], level: row.level ?? null,
       hint: cat === 'classifiers' ? 'Quel classificateur ?' : cat === 'numbers' ? 'En coréen natif' : undefined,
       alt: cat === 'numbers' && row.short_form ? `forme courte : ${row.short_form}` : undefined, zh: chineseOf(row),
-      extra: cat === 'numbers' && row.short_form ? [row.short_form] : [], accepted: new Set(), others: [] });
+      extra: cat === 'numbers' && row.short_form ? [row.short_form] : [], accepted: new Set(), others: [] };
+    seen.set(key, card);
+    cards.push(card);
   }
   const groups = new Map<string, Card[]>();
   for (const card of cards) {

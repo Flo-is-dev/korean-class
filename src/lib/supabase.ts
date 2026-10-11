@@ -22,7 +22,7 @@ export async function loadCards(): Promise<CardRow[]> {
   const rows: CardRow[] = [];
   for (let offset = 0; ; offset += 1000) {
     const { data, error } = await supabase.from('cards')
-      .select('id, category, word_type, book, lesson, ko, fr, short_form, zh_hanzi, zh_pinyin, zh_note')
+      .select('id, category, word_type, book, lesson, level, ko, fr, short_form, zh_hanzi, zh_pinyin, zh_note')
       .order('sort_order').order('id').range(offset, offset + 999);
     if (error) throw new Error(`Lecture des cartes impossible : ${error.message}`);
     rows.push(...data);

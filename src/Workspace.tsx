@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
-import type { Book, Card, CardRow, Category, Game, LibraryFilters, Page, QuizResult, QuizRun, Settings, Stats } from './types';
+import type { Book, BookFilter, Card, LevelFilter, CardRow, Category, Game, LibraryFilters, Page, QuizResult, QuizRun, Settings, Stats } from './types';
 import { Header } from './components/Header';
 import { Icon } from './components/Icon';
 import { GameBar } from './components/GameBar';
@@ -13,8 +13,9 @@ import { QuizPage } from './pages/QuizPage';
 import { ResultPage } from './pages/ResultPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { validateBookFilter } from './lib/books';
+import { levelsOf, validateLevelFilter } from './lib/levels';
 import { buildCards, isError } from './lib/cards';
-import { loadBookFilter, loadGame, loadSettings, saveBookFilter, saveGame, saveSettings } from './lib/storage';
+import { loadBookFilter, loadGame, loadLevelFilter, loadSettings, saveBookFilter, saveGame, saveLevelFilter, saveSettings } from './lib/storage';
 import { rewardSession } from './lib/game';
 import { deleteCards, errorMessage, supabase } from './lib/supabase';
 import { playSound, setMusic } from './lib/sound';
@@ -39,7 +40,7 @@ export function Workspace({ user, initialRows, initialStats, admin, books }: { b
   useEffect(() => { if (viewRef.current) viewRef.current.scrollTop = 0; }, [page, settingsOpen, run?.id, result]);
   const [chronoCategory, setChronoCategory] = useState<Category>('verbs');
   const [chronoSize, setChronoSize] = useState(20);
-  const [library, setLibrary] = useState<LibraryFilters>(() => ({ query: '', cat: 'all', book: loadBookFilter(books, initialRows), selected: new Set() }));
+  const [library, setLibrary] = useState<LibraryFilters>(() => ({ query: '', cat: 'all', book: loadBookFilter(books, initialRows), level: loadLevelFilter(), selected: new Set() }));
   useEffect(() => {
     if (books === null) return;
     const book = validateBookFilter(library.book, books, rows);
@@ -48,6 +49,21 @@ export function Workspace({ user, initialRows, initialStats, admin, books }: { b
       saveBookFilter(book);
     }
   }, [books, rows, library.book]);
+  // One book filter for the whole app; it is ignored while the catalogue is unavailable.
+  const book = books === null ? 'all' : library.book;
+  function changeBook(next: BookFilter) {
+    if (busyRef.current) return;
+    setLibrary(current => ({ ...current, book: next }));
+    saveBookFilter(next);
+  }
+  // Likewise one level filter; a level no card has any more falls back to all levels.
+  const levels = useMemo(() => levelsOf(rows), [rows]);
+  const level = validateLevelFilter(library.level, levels);
+  function changeLevel(next: LevelFilter) {
+    if (busyRef.current) return;
+    setLibrary(current => ({ ...current, level: next }));
+    saveLevelFilter(next);
+  }
   const effects = game.sound && game.effects;
   const music = game.sound && game.music ? game.track : null;
   useEffect(() => { setMusic(music); return () => setMusic(null); }, [music]);
@@ -115,9 +131,9 @@ export function Workspace({ user, initialRows, initialStats, admin, books }: { b
     <main id="view" ref={viewRef}>
       {settingsOpen && <SettingsPage email={user.email} busy={busy} audio={game} onAudio={patch => persistGame({ ...game, ...patch })} onSignOut={() => void signOut()} onBack={() => setSettingsOpen(false)} backLabel={run ? 'Reprendre la série' : 'Retour'} />}
       <div className="view-body" hidden={settingsOpen}>{run ? <QuizPage key={run.id} run={run} pool={cards} paused={settingsOpen} onAnswer={(id, ok) => { playSound(ok ? 'correct' : 'wrong', effects); return progress.record(id, ok); }} onOverride={(id, previous) => { progress.override(id, previous); playSound('correct', effects); }} onFinish={finish} onSound={kind => playSound(kind, effects)} /> : result ? <ResultPage {...result} onRetry={selected => start(selected)} onLearn={() => navigate('learn')} onScores={() => navigate('scores')} /> : <>
-        {page === 'learn' && <LearnPage cards={cards} settings={settings} stats={progress.stats} onSettings={changeSettings} onStart={selected => start(selected)} />}
-        {page === 'chrono' && <ChronoPage cards={cards} category={chronoCategory} size={chronoSize} onCategory={setChronoCategory} onSize={setChronoSize} onStart={selected => start(selected, true)} onChoose={() => { setLibrary(current => ({ ...current, query: '', cat: chronoCategory, selected: new Set() })); navigate('words'); }} />}
-        {page === 'words' && <LibraryPage books={books} rows={rows} filters={library} admin={admin} busy={busy} onFilters={next => { if (!busyRef.current) { setLibrary(next); if (next.book !== library.book) saveBookFilter(next.book); } }} onStart={selected => start(selected, true, true)} onDelete={ids => void remove(ids)} />}
+        {page === 'learn' && <LearnPage books={books} book={book} onBook={changeBook} levels={levels} level={level} onLevel={changeLevel} cards={cards} settings={settings} stats={progress.stats} onSettings={changeSettings} onStart={selected => start(selected)} />}
+        {page === 'chrono' && <ChronoPage books={books} book={book} onBook={changeBook} levels={levels} level={level} onLevel={changeLevel} cards={cards} category={chronoCategory} size={chronoSize} onCategory={setChronoCategory} onSize={setChronoSize} onStart={selected => start(selected, true)} onChoose={() => { setLibrary(current => ({ ...current, query: '', cat: chronoCategory, selected: new Set() })); navigate('words'); }} />}
+        {page === 'words' && <LibraryPage books={books} levels={levels} rows={rows} filters={{ ...library, level }} admin={admin} busy={busy} onFilters={next => { if (!busyRef.current) { setLibrary(next); if (next.book !== library.book) saveBookFilter(next.book); if (next.level !== level) saveLevelFilter(next.level); } }} onStart={selected => start(selected, true, true)} onDelete={ids => void remove(ids)} />}
         {page === 'scores' && <ScoresPage game={game} onChallenge={() => navigate('chrono')} />}
       </>}</div>
     {notice && <p className="notice" role="status">{notice}<button className="btn link" aria-label="Fermer le message" onClick={() => setNotice('')}>Fermer</button></p>}

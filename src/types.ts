@@ -3,12 +3,14 @@ export type Mode = 'flash' | 'mcq' | 'type';
 export type Page = 'learn' | 'chrono' | 'words' | 'scores';
 export interface Book { code: string; label: string }
 export type BookFilter = 'all' | 'none' | `book:${string}`;
+export type LevelFilter = 'all' | number;
 export interface CardRow {
   id: string;
   category: Exclude<Category, 'verbs' | 'adjectives'>;
   word_type: 'verb' | 'adjective' | null;
   book: string | null;
   lesson: number | null;
+  level?: number | null;
   ko: string;
   fr: string;
   short_form: string | null;
@@ -23,6 +25,8 @@ export interface Card {
   front: string;
   back: string;
   tag: string;
+  books: (string | null)[];
+  level: number | null;
   hint?: string;
   alt?: string;
   zh?: Chinese;
@@ -49,4 +53,4 @@ export type AudioPrefs = Pick<Game, 'sound' | 'effects' | 'music' | 'track'>;
 export interface QuizRun { id: number; cards: Card[]; mode: Mode; timed: boolean; custom: boolean }
 export interface Answer { card: Card; ok: boolean; typed?: string }
 export interface QuizResult { run: QuizRun; answers: Answer[]; seconds: number; completed: boolean }
-export interface LibraryFilters { query: string; cat: Category | 'all'; book: BookFilter; selected: Set<string> }
+export interface LibraryFilters { query: string; cat: Category | 'all'; book: BookFilter; level: LevelFilter; selected: Set<string> }
