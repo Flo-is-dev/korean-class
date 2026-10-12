@@ -32,12 +32,12 @@ function isScore(value: unknown): value is Score {
     nonNegative(value.seconds) && nonNegative(value.adjusted);
 }
 export function loadSettings(): Settings {
-  const fallback: Settings = { cats: ['vocab'], size: 20, mode: 'flash', errorsOnly: false };
+  const fallback: Settings = { cats: ['vocab'], size: 20, mode: 'flash', direction: 'fr-ko', errorsOnly: false };
   try {
     const saved: unknown = JSON.parse(localStorage.getItem(prefsKey) ?? 'null');
     if (!isObject(saved)) return fallback;
     const cats = Array.isArray(saved.cats) ? saved.cats.filter(isCategory) : [];
-    return { cats: cats.length ? cats : fallback.cats, size: typeof saved.size === 'number' && SIZES.includes(saved.size) ? saved.size : 20, mode: saved.mode === 'type' || saved.mode === 'mcq' ? saved.mode : 'flash', errorsOnly: false };
+    return { cats: cats.length ? cats : fallback.cats, size: typeof saved.size === 'number' && SIZES.includes(saved.size) ? saved.size : 20, mode: saved.mode === 'type' || saved.mode === 'mcq' ? saved.mode : 'flash', direction: saved.direction === 'ko-fr' ? 'ko-fr' : 'fr-ko', errorsOnly: false };
   } catch { return fallback; }
 }
 export function loadGame(userId: string): Game {
@@ -46,7 +46,7 @@ export function loadGame(userId: string): Game {
     if (!isObject(saved)) return emptyGame();
     return { xp: nonNegative(saved.xp) ? saved.xp : 0,
       days: Array.isArray(saved.days) ? saved.days.filter((day): day is string => typeof day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(day)) : [],
-      scores: Array.isArray(saved.scores) ? saved.scores.filter(isScore).map(score => ({ ...score, custom: !!score.custom })) : [],
+      scores: Array.isArray(saved.scores) ? saved.scores.filter(isScore).map(score => ({ ...score, custom: !!score.custom, direction: score.direction === 'ko-fr' ? 'ko-fr' : 'fr-ko' })) : [],
       sound: typeof saved.sound === 'boolean' ? saved.sound : true,
       effects: typeof saved.effects === 'boolean' ? saved.effects : true,
       music: typeof saved.music === 'boolean' ? saved.music : true,

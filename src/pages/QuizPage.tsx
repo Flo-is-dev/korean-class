@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Answer, Card, Progress, QuizResult, QuizRun } from '../types';
-import { categoryName, choicesFor, normalize } from '../lib/cards';
+import { acceptedFor, answerKey, categoryName, choicesFor } from '../lib/cards';
 import { formatTime } from '../lib/game';
 import { Hanzi } from '../components/Hanzi';
 import { Icon } from '../components/Icon';
@@ -36,7 +36,11 @@ export function QuizPage({ run, pool, paused = false, onAnswer, onOverride, onFi
   const [late, setLate] = useState(false);
   const cardStarted = useRef(performance.now());
   const lastTick = useRef(0);
-  const choices = useMemo(() => mcq ? choicesFor(card, pool ?? run.cards) : [], [mcq, card, pool, run.cards]);
+  const direction = run.direction ?? 'fr-ko';
+  const reverse = direction === 'ko-fr';
+  const accepted = useMemo(() => acceptedFor(card, direction, pool ?? run.cards), [card, direction, pool, run.cards]);
+  const isRight = (text: string) => accepted.has(answerKey(text, direction));
+  const choices = useMemo(() => mcq ? choicesFor(card, pool ?? run.cards, direction) : [], [mcq, card, pool, run.cards, direction]);
   // While paused (settings open over the series) both clocks stop; on resume they pick up where they left off.
   const pausedAt = useRef<number | null>(null);
   useEffect(() => {
@@ -91,12 +95,12 @@ export function QuizPage({ run, pool, paused = false, onAnswer, onOverride, onFi
     if (flash) next();
   }
   function choose(choice: string) {
-    if (!revealed) submit(card.accepted.has(normalize(choice)), choice);
+    if (!revealed) submit(isRight(choice), choice);
   }
   function check(giveUp = false) {
     if (revealed || handled.current) return;
     if (!giveUp && !input.trim()) { inputRef.current?.focus(); return; }
-    submit(!giveUp && card.accepted.has(normalize(input.trim())), giveUp ? '' : input.trim());
+    submit(!giveUp && isRight(input.trim()), giveUp ? '' : input.trim());
   }
   // Timed multiple choice: each question runs out after LIMIT seconds, ticking through the last five.
   useEffect(() => {
@@ -140,13 +144,13 @@ export function QuizPage({ run, pool, paused = false, onAnswer, onOverride, onFi
       </div>
       {limit > 0 && <div className={`countdown ${left <= 5 ? 'urgent' : ''}`} role="timer" aria-label="Temps restant pour cette question"><div className="bar"><i style={{ width: `${left / limit * 100}%` }} /></div><span>{Math.ceil(left)} s</span></div>}
       <div className={`card ${revealed ? 'flipped' : flash ? 'clickable' : ''}`} aria-live="polite" onClick={flash ? reveal : undefined}><div className="card-inner">
-        <div className="face front" aria-hidden={revealed}><div className="tag"><span>{categoryName(card.cat)}</span><span>{card.tag}</span></div><div className="fr">{card.front}</div>{card.hint && <div className="hint">{card.hint}</div>}</div>
-        <div className="face back" aria-hidden={!revealed}><div className="tag"><span>{card.front}</span><span>{card.tag}</span></div>{answer && (!mcq || late) && <span className={`verdict ${answer.ok ? 'ok' : 'ko-v'}`}>{answer.ok ? 'Correct' : late ? 'Temps écoulé' : 'Pas tout à fait'}</span>}<div className="ko" lang="ko">{card.back}{revealed && card.zh && <Hanzi key={card.id} zh={card.zh} />}</div>{card.alt && <div className="ko-alt" lang="ko">{card.alt}</div>}{card.others.length > 0 && <div className="ko-alt" lang="ko">aussi : {card.others.join(' · ')}</div>}{!mcq && answer?.typed && !answer.ok && <div className="yours">Ta réponse : <b lang="ko">{answer.typed}</b></div>}</div>
+        <div className="face front" aria-hidden={revealed}><div className="tag"><span>{categoryName(card.cat)}</span><span>{card.tag}</span></div>{reverse ? <div className="ko" lang="ko">{card.back}</div> : <><div className="fr">{card.front}</div>{card.hint && <div className="hint">{card.hint}</div>}</>}</div>
+        <div className="face back" aria-hidden={!revealed}><div className="tag"><span lang={reverse ? 'ko' : undefined}>{reverse ? card.back : card.front}</span><span>{card.tag}</span></div>{answer && (!mcq || late) && <span className={`verdict ${answer.ok ? 'ok' : 'ko-v'}`}>{answer.ok ? 'Correct' : late ? 'Temps écoulé' : 'Pas tout à fait'}</span>}{reverse ? <><div className="fr">{card.front}</div>{revealed && card.zh && <div className="ko-alt" lang="ko">{card.back}<Hanzi key={card.id} zh={card.zh} /></div>}</> : <div className="ko" lang="ko">{card.back}{revealed && card.zh && <Hanzi key={card.id} zh={card.zh} />}</div>}{card.alt && <div className="ko-alt" lang="ko">{card.alt}</div>}{!reverse && card.others.length > 0 && <div className="ko-alt" lang="ko">aussi : {card.others.join(' · ')}</div>}{!mcq && answer?.typed && !answer.ok && <div className="yours">Ta réponse : <b lang={reverse ? undefined : 'ko'}>{answer.typed}</b></div>}</div>
       </div></div>
       <div className="field">
         {flash && (!revealed ? <button ref={flipRef} className="btn primary" onClick={reveal}>Retourner la carte <span className="kbd">Espace</span></button> : <div className="row"><button className="btn bad" onClick={() => submit(false)}>Je ne savais pas <span className="kbd">1</span></button><button ref={yesRef} className="btn good" onClick={() => submit(true)}>Je savais <span className="kbd">2</span></button></div>)}
-        {typed && (!revealed ? <><form className="answer" onSubmit={event => { event.preventDefault(); check(); }}><input ref={inputRef} type="text" lang="ko" autoComplete="off" autoCapitalize="off" autoCorrect="off" spellCheck={false} placeholder="Réponse en hangul" aria-label="Ta réponse en coréen" value={input} onChange={event => setInput(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && (event.nativeEvent.isComposing || event.keyCode === 229)) event.preventDefault(); }} /><button className="btn primary" type="submit">Vérifier</button></form><button className="btn link" onClick={() => check(true)}>Je ne sais pas</button></> : <div className="row">{!run.timed && answer?.typed && !answer.ok && <button className="btn" title="Faute de frappe ou variante valable" onClick={override}>J’avais bon</button>}{nextButton}</div>)}
-        {mcq && <><div className="choices">{choices.map((choice, position) => <button key={choice} className={`btn choice ${!revealed ? '' : card.accepted.has(normalize(choice)) ? 'good' : choice === answer?.typed ? 'bad' : ''}`} lang="ko" disabled={revealed} onClick={() => choose(choice)}><span className="kbd">{position + 1}</span>{choice}</button>)}</div>{revealed && nextButton}</>}
+        {typed && (!revealed ? <><form className="answer" onSubmit={event => { event.preventDefault(); check(); }}><input ref={inputRef} type="text" lang={reverse ? 'fr' : 'ko'} autoComplete="off" autoCapitalize="off" autoCorrect="off" spellCheck={false} placeholder={reverse ? 'Réponse en français' : 'Réponse en hangul'} aria-label={reverse ? 'Ta réponse en français' : 'Ta réponse en coréen'} value={input} onChange={event => setInput(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && (event.nativeEvent.isComposing || event.keyCode === 229)) event.preventDefault(); }} /><button className="btn primary" type="submit">Vérifier</button></form><button className="btn link" onClick={() => check(true)}>Je ne sais pas</button></> : <div className="row">{!run.timed && answer?.typed && !answer.ok && <button className="btn" title="Faute de frappe ou variante valable" onClick={override}>J’avais bon</button>}{nextButton}</div>)}
+        {mcq && <><div className="choices">{choices.map((choice, position) => <button key={choice} className={`btn choice ${!revealed ? '' : isRight(choice) ? 'good' : choice === answer?.typed ? 'bad' : ''}`} lang={reverse ? undefined : 'ko'} disabled={revealed} onClick={() => choose(choice)}><span className="kbd">{position + 1}</span>{choice}</button>)}</div>{revealed && nextButton}</>}
       </div>
     </div>
   </>;

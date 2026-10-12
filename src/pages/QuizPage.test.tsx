@@ -138,6 +138,23 @@ describe('quiz interactions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Terminer' }));
     expect(onFinish.mock.calls[0][0]).toMatchObject({ seconds: 5, completed: false });
   });
+  it('asks the Korean word and expects its French meaning when the direction is reversed', () => {
+    const { onAnswer } = setup({ direction: 'ko-fr', timed: false });
+    expect(document.querySelector('.front .ko')!.textContent).toBe('먹다');
+    expect(screen.getByRole('textbox', { name: 'Ta réponse en français' })).toBeDefined();
+    answer('manger'); expect(onAnswer).toHaveBeenLastCalledWith('1', true);
+    fireEvent.click(screen.getByRole('button', { name: /Carte suivante/ }));
+    answer('먹다'); expect(onAnswer).toHaveBeenLastCalledWith('2', false);
+  });
+  it('offers French choices in a reversed multiple-choice run', () => {
+    const pool = buildCards(['먹다', '마시다', '가다', '오다', '자다'].map((ko, index) => ({ id: String(index + 1), category: 'vocab' as const, word_type: 'verb' as const, ko, fr: `Verbe ${index + 1}`, book: null, lesson: null, short_form: null })));
+    const onAnswer = vi.fn();
+    const view = render(<QuizPage run={{ id: 1, cards: pool.slice(0, 1), mode: 'mcq', timed: false, custom: false, direction: 'ko-fr' }} pool={pool} onAnswer={onAnswer} onOverride={() => {}} onFinish={() => {}} />);
+    const choices = [...view.container.querySelectorAll<HTMLButtonElement>('.choice')];
+    expect(choices).toHaveLength(4); expect(choices.every(choice => /Verbe \d$/.test(choice.textContent!))).toBe(true);
+    fireEvent.click(choices.find(choice => choice.textContent!.endsWith('Verbe 1'))!);
+    expect(onAnswer).toHaveBeenCalledExactlyOnceWith('1', true);
+  });
   it('cleans up its timer when navigating away', () => {
     vi.useFakeTimers();
     const intervals = vi.spyOn(globalThis, 'setInterval');

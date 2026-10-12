@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
-import type { Book, BookFilter, Card, LevelFilter, CardRow, Category, Game, LibraryFilters, Page, QuizResult, QuizRun, Settings, Stats } from './types';
+import type { Book, BookFilter, Card, LevelFilter, CardRow, Category, Game, GrammarPoint, LibraryFilters, Page, QuizResult, QuizRun, Settings, Stats } from './types';
 import { Header } from './components/Header';
 import { Icon } from './components/Icon';
 import { GameBar } from './components/GameBar';
 import type { IconName } from './components/Icon';
 import { LearnPage } from './pages/LearnPage';
 import { ChronoPage } from './pages/ChronoPage';
+import { GrammarPage } from './pages/GrammarPage';
 import { LibraryPage } from './pages/LibraryPage';
 import { ScoresPage } from './pages/ScoresPage';
 import { QuizPage } from './pages/QuizPage';
@@ -21,7 +22,7 @@ import { deleteCards, errorMessage, supabase } from './lib/supabase';
 import { playSound, setMusic } from './lib/sound';
 import { useProgress } from './hooks/useProgress';
 
-const pages: [Page, IconName, string][] = [['learn', 'cards', 'Apprendre'], ['chrono', 'stopwatch', 'Chrono'], ['words', 'book', 'Mes mots'], ['scores', 'trophy', 'Scores']];
+const pages: [Page, IconName, string][] = [['learn', 'cards', 'Apprendre'], ['chrono', 'stopwatch', 'Chrono'], ['grammar', 'grammar', 'Grammaire'], ['words', 'book', 'Mes mots'], ['scores', 'trophy', 'Scores']];
 
 export function Workspace({ user, initialRows, initialStats, admin, books }: { books: Book[] | null; user: User; initialRows: CardRow[]; initialStats: Stats; admin: boolean }) {
   const [rows, setRows] = useState(initialRows);
@@ -67,6 +68,16 @@ export function Workspace({ user, initialRows, initialStats, admin, books }: { b
   const effects = game.sound && game.effects;
   const music = game.sound && game.music ? game.track : null;
   useEffect(() => { setMusic(music); return () => setMusic(null); }, [music]);
+  // The grammar detail is a history entry, so the browser or phone back button returns to the list.
+  const [grammar, setGrammar] = useState<GrammarPoint[] | null>(null);
+  const [grammarDetail, setGrammarDetail] = useState<string | null>(null);
+  useEffect(() => {
+    const popstate = (event: PopStateEvent) => setGrammarDetail(event.state?.grammar ?? null);
+    window.addEventListener('popstate', popstate);
+    return () => window.removeEventListener('popstate', popstate);
+  }, []);
+  function openGrammar(id: string) { history.pushState({ grammar: id }, ''); setGrammarDetail(id); }
+  function closeGrammar() { if (history.state?.grammar) history.back(); setGrammarDetail(null); }
   const sequence = useRef(0);
   const awarded = useRef(new Set<number>());
 
@@ -83,13 +94,13 @@ export function Workspace({ user, initialRows, initialStats, admin, books }: { b
   function navigate(next: Page) {
     if (busyRef.current) return;
     if (run && !window.confirm('Quitter cette série ? Un chrono inachevé ne sera pas classé.')) return;
-    setRun(null); setResult(null); setPage(next); setSettingsOpen(false); void progress.flush();
+    closeGrammar(); setRun(null); setResult(null); setPage(next); setSettingsOpen(false); void progress.flush();
   }
-  function start(selected: Card[], timed = false, custom = false) {
+  function start(selected: Card[], timed = false, custom = false, direction = settings.direction) {
     if (!selected.length || busyRef.current) return;
     playSound('tap', effects);
     setResult(null);
-    setRun({ id: ++sequence.current, cards: selected, mode: timed ? 'mcq' : settings.mode, timed, custom });
+    setRun({ id: ++sequence.current, cards: selected, mode: timed ? 'mcq' : settings.mode, timed, custom, direction });
   }
   function finish(completed: QuizResult) {
     if (awarded.current.has(completed.run.id)) return;
@@ -130,10 +141,11 @@ export function Workspace({ user, initialRows, initialStats, admin, books }: { b
     {progress.saveError && <div className="save-error" role="alert">La dernière sauvegarde de progression a échoué. <button className="btn link" onClick={() => void progress.flush()}>Réessayer la sauvegarde</button></div>}
     <main id="view" ref={viewRef}>
       {settingsOpen && <SettingsPage email={user.email} busy={busy} audio={game} onAudio={patch => persistGame({ ...game, ...patch })} onSignOut={() => void signOut()} onBack={() => setSettingsOpen(false)} backLabel={run ? 'Reprendre la série' : 'Retour'} />}
-      <div className="view-body" hidden={settingsOpen}>{run ? <QuizPage key={run.id} run={run} pool={cards} paused={settingsOpen} onAnswer={(id, ok) => { playSound(ok ? 'correct' : 'wrong', effects); return progress.record(id, ok); }} onOverride={(id, previous) => { progress.override(id, previous); playSound('correct', effects); }} onFinish={finish} onSound={kind => playSound(kind, effects)} /> : result ? <ResultPage {...result} onRetry={selected => start(selected)} onLearn={() => navigate('learn')} onScores={() => navigate('scores')} /> : <>
+      <div className="view-body" hidden={settingsOpen}>{run ? <QuizPage key={run.id} run={run} pool={cards} paused={settingsOpen} onAnswer={(id, ok) => { playSound(ok ? 'correct' : 'wrong', effects); return progress.record(id, ok); }} onOverride={(id, previous) => { progress.override(id, previous); playSound('correct', effects); }} onFinish={finish} onSound={kind => playSound(kind, effects)} /> : result ? <ResultPage {...result} onRetry={selected => start(selected, false, false, result.result.run.direction)} onLearn={() => navigate('learn')} onScores={() => navigate('scores')} /> : <>
         {page === 'learn' && <LearnPage books={books} book={book} onBook={changeBook} levels={levels} level={level} onLevel={changeLevel} cards={cards} settings={settings} stats={progress.stats} onSettings={changeSettings} onStart={selected => start(selected)} />}
-        {page === 'chrono' && <ChronoPage books={books} book={book} onBook={changeBook} levels={levels} level={level} onLevel={changeLevel} cards={cards} category={chronoCategory} size={chronoSize} onCategory={setChronoCategory} onSize={setChronoSize} onStart={selected => start(selected, true)} onChoose={() => { setLibrary(current => ({ ...current, query: '', cat: chronoCategory, selected: new Set() })); navigate('words'); }} />}
-        {page === 'words' && <LibraryPage books={books} levels={levels} rows={rows} filters={{ ...library, level }} admin={admin} busy={busy} onFilters={next => { if (!busyRef.current) { setLibrary(next); if (next.book !== library.book) saveBookFilter(next.book); if (next.level !== level) saveLevelFilter(next.level); } }} onStart={selected => start(selected, true, true)} onDelete={ids => void remove(ids)} />}
+        {page === 'chrono' && <ChronoPage books={books} book={book} onBook={changeBook} levels={levels} level={level} onLevel={changeLevel} cards={cards} category={chronoCategory} size={chronoSize} direction={settings.direction} onDirection={direction => changeSettings({ ...settings, direction })} onCategory={setChronoCategory} onSize={setChronoSize} onStart={selected => start(selected, true)} onChoose={() => { setLibrary(current => ({ ...current, query: '', cat: chronoCategory, selected: new Set() })); navigate('words'); }} />}
+        {page === 'grammar' && <GrammarPage books={books} points={grammar} cards={cards} detail={grammarDetail} onLoaded={setGrammar} onOpen={openGrammar} onBack={closeGrammar} onStart={selected => start(selected)} />}
+        {page === 'words' && <LibraryPage books={books} levels={levels} rows={rows} filters={{ ...library, level }} admin={admin} busy={busy} direction={settings.direction} onDirection={direction => changeSettings({ ...settings, direction })} onFilters={next => { if (!busyRef.current) { setLibrary(next); if (next.book !== library.book) saveBookFilter(next.book); if (next.level !== level) saveLevelFilter(next.level); } }} onStart={selected => start(selected, true, true)} onDelete={ids => void remove(ids)} />}
         {page === 'scores' && <ScoresPage game={game} onChallenge={() => navigate('chrono')} />}
       </>}</div>
     {notice && <p className="notice" role="status">{notice}<button className="btn link" aria-label="Fermer le message" onClick={() => setNotice('')}>Fermer</button></p>}

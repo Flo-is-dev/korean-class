@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import type { Book, CardRow, Progress, Stats } from '../types';
+import type { Book, CardRow, GrammarPoint, Progress, Stats } from '../types';
 import type { Database } from './database.types';
 
 // Publishable values, protected by the existing server-side RLS policies.
@@ -28,6 +28,24 @@ export async function loadCards(): Promise<CardRow[]> {
     rows.push(...data);
     if (data.length < 1000) return rows;
   }
+}
+type GrammarRecord = {
+  id: string; ko: string; fr: string; book: string | null; lesson: number | null; cefr: string | null; conj_type: string | null; section: string | null;
+  books: { label: string | null } | { label: string | null }[] | null;
+  card_examples: { ko: string | null; fr: string | null; sort_order: number | null }[] | null;
+};
+// Grammar points with their book label and example sentences, in one request.
+// These columns and relations are not described in database.types, hence the cast.
+export async function loadGrammar(): Promise<GrammarPoint[]> {
+  const { data, error } = await supabase.from('cards')
+    .select('id, ko, fr, book, lesson, cefr, conj_type, section, level, sort_order, books(label), card_examples(ko, fr, sort_order)')
+    .eq('category', 'grammar').order('sort_order');
+  if (error) throw new Error(`Lecture de la grammaire impossible : ${error.message}`);
+  return (data as unknown as GrammarRecord[]).map(row => ({
+    id: row.id, ko: row.ko ?? '', fr: row.fr ?? '', book: row.book ?? null, lesson: row.lesson ?? null, cefr: row.cefr || null, conjType: row.conj_type || null, section: row.section || null,
+    bookLabel: (Array.isArray(row.books) ? row.books[0]?.label : row.books?.label) || null,
+    examples: [...(row.card_examples ?? [])].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)).map(example => ({ ko: example.ko ?? '', fr: example.fr ?? '' })).filter(example => example.ko || example.fr),
+  }));
 }
 export async function loadStats(userId: string): Promise<Stats> {
   const stats: Stats = {};

@@ -55,10 +55,22 @@ const art = {
     <path d="M12 6.4c2-1.5 4.5-2 8.6-2v13.2c-4.1 0-6.6.5-8.6 2z" fill={CREAM} {...line} />
     <path d="M14.6 9.4c1.2-.5 2.3-.7 3.6-.7M14.6 12.6c1.2-.5 2.3-.7 3.6-.7" {...mark} strokeWidth={1.3} />
   </>,
+  grammar: <>
+    <rect x="2.6" y="6" width="9.4" height="12" rx="2" fill={AMBER} {...line} />
+    <rect x="12" y="6" width="9.4" height="12" rx="2" fill={CREAM} {...line} />
+    <path d="M5.4 10h3.6c0 2.2-.8 3.8-2.6 4.8M15 11h3.6M15 14h2.2" {...mark} strokeWidth={1.4} />
+  </>,
 };
-// Haru's navigation: hand-drawn hangul cards, a split dial, a bound notebook,
-// and a small star cup. Colors inherit the active Pop / dark palette.
+// Haru's navigation: hand-drawn hangul cards, a split dial, a stem tile joined to its ending,
+// a bound notebook, and a small star cup. Colors inherit the active Pop / dark palette.
 const navigationArt = {
+  grammar: <>
+    <path className="icon-soft-shadow" d="M6 10h24v17H6z" />
+    <rect className="icon-tint" x="3" y="7" width="13" height="17" rx="3" />
+    <rect className="icon-paper" x="16" y="7" width="13" height="17" rx="3" />
+    <path d="M7 12h5c0 3.4-1.2 5.8-4 7.4M20.5 14h4.5m-4.5 4h3M9 29h14" />
+    <circle className="icon-dot" cx="16" cy="15.5" r="2" />
+  </>,
   cards: <>
     <path className="icon-soft-shadow" d="m7 7 15-2 2 22-15 2z" />
     <path className="icon-tint" d="M6 5 19 2l5 21-13 3z" />

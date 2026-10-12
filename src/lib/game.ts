@@ -26,7 +26,7 @@ export function rewardSession(game: Game, result: QuizResult): { game: Game; rew
     const cats = [...new Set(result.run.cards.map(card => card.cat))];
     const seconds = Math.max(0.1, result.seconds);
     const penalty = (result.run.cards.length - correct) * 5;
-    next.scores.push({ id: crypto.randomUUID(), date: new Date().toISOString(), cat: cats.length === 1 ? cats[0] : 'mixed', size: result.run.cards.length, correct, seconds, adjusted: seconds + penalty, custom: result.run.custom });
+    next.scores.push({ id: crypto.randomUUID(), date: new Date().toISOString(), cat: cats.length === 1 ? cats[0] : 'mixed', size: result.run.cards.length, correct, seconds, adjusted: seconds + penalty, custom: result.run.custom, direction: result.run.direction ?? 'fr-ko' });
     reward += ` · ${formatTime(seconds)} (+${penalty} s de pénalité)`;
   }
   return { game: next, reward };

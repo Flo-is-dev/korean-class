@@ -1,4 +1,4 @@
-import type { Card, CardRow, Category, Chinese, Progress, Settings, Stats } from '../types';
+import type { Card, CardRow, Category, Chinese, Direction, Progress, Settings, Stats } from '../types';
 
 export const CATEGORIES: { key: Category; label: string }[] = [
   { key: 'vocab', label: 'Vocabulaire' }, { key: 'verbs', label: 'Verbes' },
@@ -50,17 +50,31 @@ export const cardPool = (cards: Card[], settings: Settings, stats: Stats) => car
 export function recordAnswer(previous: Progress | undefined, ok: boolean): Progress {
   return { right: (previous?.right ?? 0) + Number(ok), wrong: (previous?.wrong ?? 0) + Number(!ok), streak: ok ? (previous?.streak ?? 0) + 1 : 0, last: Date.now() };
 }
-// Multiple choice: the answer and up to three other Korean words, taken from the card's own category first.
-export function choicesFor(card: Card, pool: Card[], count = 4): string[] {
-  const taken = new Set(card.accepted);
+// Korean → French: the answer is the French side, compared without accents or parenthesised clarifications.
+export const answerOf = (card: Card, direction: Direction) => direction === 'ko-fr' ? card.front : card.back;
+export const answerKey = (text: string, direction: Direction) => direction === 'ko-fr' ? searchText(normalize(text)) : normalize(text);
+function meanings(fr: string) {
+  const withoutParens = fr.replace(/\([^)]*\)/g, '');
+  return [withoutParens, ...withoutParens.split(/[\/,;]/)].map(text => answerKey(text, 'ko-fr')).filter(Boolean);
+}
+// Reversed, every French meaning of the cards sharing this Korean word is accepted.
+export function acceptedFor(card: Card, direction: Direction, pool: Card[]): Set<string> {
+  if (direction === 'fr-ko') return card.accepted;
+  const key = normalize(card.back);
+  return new Set([card, ...pool.filter(other => other.cat === card.cat && normalize(other.back) === key)].flatMap(other => meanings(other.front)));
+}
+// Multiple choice: the answer and up to three other words in the answer's language, taken from the card's own category first.
+export function choicesFor(card: Card, pool: Card[], direction: Direction = 'fr-ko', count = 4): string[] {
+  const taken = new Set(acceptedFor(card, direction, pool));
   const distractors: string[] = [];
   for (const other of [...shuffle(pool.filter(other => other.cat === card.cat)), ...shuffle(pool.filter(other => other.cat !== card.cat))]) {
     if (distractors.length === count - 1) break;
-    const key = normalize(other.back);
+    const text = answerOf(other, direction);
+    const key = answerKey(text, direction);
     if (taken.has(key)) continue;
-    taken.add(key); distractors.push(other.back);
+    taken.add(key); distractors.push(text);
   }
-  return shuffle([card.back, ...distractors]);
+  return shuffle([answerOf(card, direction), ...distractors]);
 }
 export function shuffle<T>(items: T[]): T[] {
   const result = [...items];

@@ -1,6 +1,20 @@
 export type Category = 'vocab' | 'verbs' | 'adjectives' | 'colors' | 'numbers' | 'classifiers' | 'interrogatives' | 'grammar';
 export type Mode = 'flash' | 'mcq' | 'type';
-export type Page = 'learn' | 'chrono' | 'words' | 'scores';
+export type Direction = 'fr-ko' | 'ko-fr';
+export type Page = 'learn' | 'chrono' | 'grammar' | 'words' | 'scores';
+export interface GrammarExample { ko: string; fr: string }
+export interface GrammarPoint {
+  id: string;
+  ko: string;
+  fr: string;
+  book: string | null;
+  bookLabel: string | null;
+  lesson: number | null;
+  cefr: string | null;
+  conjType: string | null;
+  section: string | null;
+  examples: GrammarExample[];
+}
 export interface Book { code: string; label: string }
 export type BookFilter = 'all' | 'none' | `book:${string}`;
 export type LevelFilter = 'all' | number;
@@ -36,7 +50,7 @@ export interface Card {
 }
 export interface Progress { right: number; wrong: number; streak: number; last: number }
 export type Stats = Record<string, Progress>;
-export interface Settings { cats: Category[]; size: number; mode: Mode; errorsOnly: boolean }
+export interface Settings { cats: Category[]; size: number; mode: Mode; direction: Direction; errorsOnly: boolean }
 export interface Score {
   id: string;
   date: string;
@@ -46,11 +60,12 @@ export interface Score {
   seconds: number;
   adjusted: number;
   custom: boolean;
+  direction?: Direction;
 }
 export interface Game { xp: number; days: string[]; scores: Score[]; sound: boolean; effects: boolean; music: boolean; track: MusicTrack; daily: Record<string, number> }
 export type MusicTrack = 'calm' | 'rhythm' | 'korean';
 export type AudioPrefs = Pick<Game, 'sound' | 'effects' | 'music' | 'track'>;
-export interface QuizRun { id: number; cards: Card[]; mode: Mode; timed: boolean; custom: boolean }
+export interface QuizRun { id: number; cards: Card[]; mode: Mode; timed: boolean; custom: boolean; direction?: Direction }
 export interface Answer { card: Card; ok: boolean; typed?: string }
 export interface QuizResult { run: QuizRun; answers: Answer[]; seconds: number; completed: boolean }
 export interface LibraryFilters { query: string; cat: Category | 'all'; book: BookFilter; level: LevelFilter; selected: Set<string> }
