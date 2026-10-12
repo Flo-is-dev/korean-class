@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { buildCards, choicesFor, isError, normalize, recordAnswer } from './cards';
+import { buildCards, cardPool, choicesFor, isError, normalize } from './cards';
 import { emptyGame, formatTime, rankScores, rewardSession, streakDays } from './game';
 import { loadGame, loadSettings, saveGame } from './storage';
-import { ProgressQueue } from './progress-queue';
+import { AnswerQueue } from './progress-queue';
 import type { CardRow, Progress, QuizResult, Score } from '../types';
 
 const row = (overrides: Partial<CardRow> = {}): CardRow => ({ id: '1', category: 'vocab', word_type: 'verb', fr: 'Manger', ko: '먹다', book: null, lesson: null, short_form: null, ...overrides });
@@ -35,11 +35,15 @@ describe('cards and progress', () => {
     expect(choicesFor(cards[6], cards)).toHaveLength(4);
   });
   it('requires two consecutive correct answers to leave the error list', () => {
-    const first = recordAnswer(undefined, false);
-    const second = recordAnswer(first, true);
-    expect(isError(second)).toBe(true);
-    const third = recordAnswer(second, true);
-    expect(isError(third)).toBe(false); expect(first.right).toBe(0);
+    const stat = (streak: number): Progress => ({ right: streak, wrong: 1, streak, last: 100 });
+    expect(isError(stat(0))).toBe(true); expect(isError(stat(1))).toBe(true); expect(isError(stat(2))).toBe(false); expect(isError(undefined)).toBe(false);
+  });
+  it('keeps mastered words out of the normal pool and draws only them in review', () => {
+    const cards = buildCards([row(), row({ id: '2', fr: 'Boire', ko: '마시다' })]);
+    const stats = { '2': { right: 10, wrong: 0, streak: 10, last: 100, score: 10, masteredAt: '2026-10-01T00:00:00Z' } };
+    const settings = { ...loadSettings(), cats: ['verbs' as const] };
+    expect(cardPool(cards, settings, stats).map(card => card.id)).toEqual(['1']);
+    expect(cardPool(cards, { ...settings, mastered: true }, stats).map(card => card.id)).toEqual(['2']);
   });
 });
 describe('chrono and rewards', () => {
@@ -83,22 +87,21 @@ describe('legacy storage compatibility', () => {
     expect(loadSettings().cats).toEqual(['vocab']);
   });
 });
-describe('serialized progression writes', () => {
-  const stat = (right: number): Progress => ({ right, wrong: 0, streak: right, last: 100 });
-  it('retries failed writes without losing the latest answer', async () => {
-    const save = vi.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValue(undefined);
-    const queue = new ProgressQueue(save);
-    queue.set('1', stat(1)); expect(await queue.flush()).toBe(false); expect(queue.pending).toBe(true);
-    queue.set('1', stat(2)); expect(await queue.flush()).toBe(true);
-    expect(save.mock.calls[1][0][0][1].right).toBe(2); expect(queue.pending).toBe(false);
+describe('answer queue', () => {
+  it('keeps a failed answer and sends it again, in order, with the next one', async () => {
+    const send = vi.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValue(undefined);
+    const queue = new AnswerQueue(send);
+    queue.add({ id: '1', ok: true }); expect(await queue.drain()).toBe(false); expect(queue.pending).toBe(true);
+    queue.add({ id: '2', ok: false }); expect(await queue.drain()).toBe(true);
+    expect(send.mock.calls.map(call => call[0])).toEqual([{ id: '1', ok: true }, { id: '1', ok: true }, { id: '2', ok: false }]); expect(queue.pending).toBe(false);
   });
-  it('retains an answer recorded while another save is pending', async () => {
-    let release!: () => void;
-    const save = vi.fn().mockImplementationOnce(() => new Promise<void>(resolve => { release = resolve; })).mockResolvedValue(undefined);
-    const queue = new ProgressQueue(save);
-    queue.set('1', stat(1)); const first = queue.flush();
-    await Promise.resolve(); queue.set('1', stat(2)); release(); await first;
-    expect(queue.pending).toBe(true); await queue.flush();
-    expect(save.mock.calls[1][0][0][1].right).toBe(2); expect(queue.pending).toBe(false);
+  it('holds a rejected answer until it is corrected or the learner moves on', async () => {
+    const send = vi.fn().mockResolvedValue(undefined);
+    const queue = new AnswerQueue(send);
+    queue.add({ id: '1', ok: false }, true); await queue.drain(); expect(send).not.toHaveBeenCalled(); expect(queue.pending).toBe(true);
+    expect(queue.correctHeld('1')).toBe(true);
+    queue.add({ id: '2', ok: false }, true); await queue.drain(); expect(send.mock.calls.map(call => call[0])).toEqual([{ id: '1', ok: true }]);
+    expect(queue.correctHeld('1')).toBe(false); await queue.flush();
+    expect(send).toHaveBeenLastCalledWith({ id: '2', ok: false }); expect(queue.pending).toBe(false);
   });
 });

@@ -1,18 +1,20 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { matchesBook } from '../lib/books';
 import { Hanzi } from '../components/Hanzi';
 import { SelectField } from '../components/SelectField';
-import { buildCards, categoryName, categoryOf, CATEGORIES, chineseOf, lessonTag, searchText, shuffle } from '../lib/cards';
+import { buildCards, cardIdsOf, categoryName, categoryOf, CATEGORIES, chineseOf, isMastered, lessonTag, MASTERY, scoreOf, searchText, shuffle } from '../lib/cards';
 import { levelOptions, matchesLevel, parseLevelFilter } from '../lib/levels';
 import { DirectionSwitch } from '../components/DirectionSwitch';
-import type { Book, BookFilter, Card, CardRow, Category, Direction, LibraryFilters } from '../types';
+import type { Book, BookFilter, Card, CardRow, Category, Direction, LibraryFilters, MasteryFilter, Stats } from '../types';
 
-export function LibraryPage({ books, levels, rows, filters, admin, busy, direction, onDirection, onFilters, onStart, onDelete }: {
-  books: Book[] | null; levels: number[]; rows: CardRow[]; filters: LibraryFilters; admin: boolean; busy: boolean; direction: Direction; onDirection: (direction: Direction) => void; onFilters: (filters: LibraryFilters) => void; onStart: (cards: Card[]) => void; onDelete: (ids: string[]) => void;
+export function LibraryPage({ books, levels, rows, stats, filters, admin, busy, direction, onDirection, onFilters, onStart, onDelete, onUnmaster }: {
+  books: Book[] | null; levels: number[]; rows: CardRow[]; stats: Stats; onUnmaster: (cardId: string) => void; filters: LibraryFilters; admin: boolean; busy: boolean; direction: Direction; onDirection: (direction: Direction) => void; onFilters: (filters: LibraryFilters) => void; onStart: (cards: Card[]) => void; onDelete: (ids: string[]) => void;
 }) {
   const all = useRef<HTMLInputElement>(null);
   const query = searchText(filters.query);
-  const matchingSearch = rows.filter(row => (filters.cat === 'all' || categoryOf(row) === filters.cat) && searchText(`${row.fr} ${row.ko} ${lessonTag(row)}`).includes(query));
+  const cardIds = useMemo(() => cardIdsOf(rows), [rows]);
+  const progressOf = (row: CardRow) => stats[cardIds.get(row.id) ?? row.id];
+  const matchingSearch = rows.filter(row => (filters.cat === 'all' || categoryOf(row) === filters.cat) && (filters.status === 'all' || isMastered(progressOf(row)) === (filters.status === 'mastered')) && searchText(`${row.fr} ${row.ko} ${lessonTag(row)}`).includes(query));
   const matchingOtherFilters = matchingSearch.filter(row => matchesLevel(row, filters.level));
   const visible = matchingOtherFilters.filter(row => books === null || matchesBook(row, filters.book));
   const bookOptions: [string, string][] = [['all', `Tous les livres (${matchingOtherFilters.length})`]];
@@ -33,11 +35,11 @@ export function LibraryPage({ books, levels, rows, filters, admin, busy, directi
   return <>
     <section className="panel" aria-busy={busy}>
       <h2>Mes mots</h2>
-      <div className="filters row"><input className="search" type="search" aria-label="Rechercher un mot" placeholder="Rechercher en français ou en coréen…" disabled={busy} value={filters.query} onChange={event => onFilters({ ...filters, query: event.target.value })} /><SelectField label="Catégorie" value={filters.cat} options={[["all", "Toutes les catégories"], ...CATEGORIES.map(cat => [cat.key, cat.label] as const)]} onChange={value => onFilters({ ...filters, cat: value as Category | 'all' })} />{books !== null && <SelectField label="Livre" value={filters.book} options={bookOptions} onChange={value => onFilters({ ...filters, book: value as BookFilter })} />}{levels.length > 0 && <SelectField label="Niveau" value={filters.level} options={levelOptions(levels, matchingSearch.filter(row => books === null || matchesBook(row, filters.book)))} onChange={value => onFilters({ ...filters, level: parseLevelFilter(value) })} />}</div>
+      <div className="filters row"><input className="search" type="search" aria-label="Rechercher un mot" placeholder="Rechercher en français ou en coréen…" disabled={busy} value={filters.query} onChange={event => onFilters({ ...filters, query: event.target.value })} /><SelectField label="Catégorie" value={filters.cat} options={[["all", "Toutes les catégories"], ...CATEGORIES.map(cat => [cat.key, cat.label] as const)]} onChange={value => onFilters({ ...filters, cat: value as Category | 'all' })} />{books !== null && <SelectField label="Livre" value={filters.book} options={bookOptions} onChange={value => onFilters({ ...filters, book: value as BookFilter })} />}{levels.length > 0 && <SelectField label="Niveau" value={filters.level} options={levelOptions(levels, matchingSearch.filter(row => books === null || matchesBook(row, filters.book)))} onChange={value => onFilters({ ...filters, level: parseLevelFilter(value) })} />}<SelectField label="Statut" value={filters.status} options={[['all', 'Tous'], ['learning', 'À apprendre'], ['mastered', 'Appris']]} onChange={value => onFilters({ ...filters, status: value as MasteryFilter })} /></div>
       <p className="note" role="status">{visible.length} mots affichés sur {rows.length}</p>
       <div className="selection-toolbar"><label><input ref={all} type="checkbox" disabled={busy || !visible.length} checked={allChecked} onChange={event => select(visible.map(row => row.id), event.target.checked)} />Tout sélectionner (résultats filtrés)</label><span className="selection-count">{filters.selected.size} sélectionné(s)</span><button className="btn link" disabled={busy} onClick={() => onFilters({ ...filters, selected: new Set() })}>Tout désélectionner</button></div>
       <div className="row"><DirectionSwitch value={direction} onChange={onDirection} /><button className="btn primary" disabled={busy || !filters.selected.size} onClick={() => onStart(shuffle(buildCards(rows.filter(row => filters.selected.has(row.id)))))}>Chrono avec la sélection</button><button className="btn bad" disabled={busy || !admin || !filters.selected.size} onClick={() => onDelete([...filters.selected])}>{busy ? 'Suppression…' : 'Supprimer la sélection'}</button></div>
-      <div className="word-list">{visible.map(row => <label className="word-row" key={row.id}><input type="checkbox" disabled={busy} checked={filters.selected.has(row.id)} aria-label={`Sélectionner ${row.fr}`} onChange={event => select([row.id], event.target.checked)} /><span className="word-fr">{row.fr}</span><span className="word-ko" lang="ko">{row.ko}{row.zh_hanzi && <Hanzi showPinyin zh={chineseOf(row)!} />}</span><span className="word-tag">{[categoryName(categoryOf(row)), lessonTag(row), row.level != null ? `TOPIK ${row.level}` : ''].filter(Boolean).join(' · ')}</span></label>)}{!visible.length && <p className="empty-state">Aucun mot trouvé. Essaie une autre recherche.</p>}</div>
+      <div className="word-list">{visible.map(row => <label className="word-row" key={row.id}><input type="checkbox" disabled={busy} checked={filters.selected.has(row.id)} aria-label={`Sélectionner ${row.fr}`} onChange={event => select([row.id], event.target.checked)} /><span className="word-fr">{row.fr}</span><span className="word-ko" lang="ko">{row.ko}{row.zh_hanzi && <Hanzi showPinyin zh={chineseOf(row)!} />}</span><span className="word-tag"><span>{[categoryName(categoryOf(row)), lessonTag(row), row.level != null ? `TOPIK ${row.level}` : ''].filter(Boolean).join(' · ')}</span><span className="word-score">{scoreOf(progressOf(row))}/{MASTERY}{isMastered(progressOf(row)) && <button type="button" className="mastered-check" aria-label="Appris, cliquer pour retirer" title="Appris, cliquer pour retirer" disabled={busy} onClick={event => { event.preventDefault(); onUnmaster(cardIds.get(row.id) ?? row.id); }}>✓</button>}</span></span></label>)}{!visible.length && <p className="empty-state">Aucun mot trouvé. Essaie une autre recherche.</p>}</div>
     </section>
   </>;
 }

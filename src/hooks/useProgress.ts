@@ -1,36 +1,34 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Progress, Stats } from '../types';
-import { recordAnswer } from '../lib/cards';
-import { ProgressQueue } from '../lib/progress-queue';
-import { saveProgress } from '../lib/supabase';
+import { AnswerQueue } from '../lib/progress-queue';
+import { sendAnswer, unmasterCard } from '../lib/supabase';
 
-export function useProgress(userId: string, initial: Stats) {
+// The score rule lives in the database: every answer goes through record_answer and the local state takes the returned row.
+export function useProgress(initial: Stats) {
   const [stats, setStats] = useState(initial);
   const current = useRef(initial);
   const [saveError, setSaveError] = useState(false);
-  const [queue] = useState(() => new ProgressQueue(entries => saveProgress(userId, entries)));
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const apply = useCallback((id: string, value: Progress) => {
+    current.current = { ...current.current, [id]: value };
+    setStats(current.current);
+  }, []);
+  const [queue] = useState(() => new AnswerQueue(async answer => apply(answer.id, await sendAnswer(answer.id, answer.ok))));
   const flush = useCallback(async () => {
-    clearTimeout(timer.current);
     const success = await queue.flush();
     setSaveError(!success);
     return success;
   }, [queue]);
-  const record = (id: string, ok: boolean, previous?: Progress) => {
-    const before = current.current[id];
-    const value = recordAnswer(previous ?? before, ok);
-    current.current = { ...current.current, [id]: value };
-    setStats(current.current); queue.set(id, value);
-    clearTimeout(timer.current); timer.current = setTimeout(() => void flush(), 1200);
-    return before;
+  const drain = () => { void queue.drain().then(success => setSaveError(!success)); };
+  // `hold` keeps a rejected answer unsent while it can still be corrected by `override`.
+  const record = (id: string, ok: boolean, hold = false) => {
+    queue.add({ id, ok }, hold); drain();
+    return current.current[id];
   };
-  // Restores the pre-answer state before replacing a rejected answer in training.
-  const override = (id: string, previous: Progress | undefined) => {
-    const value = recordAnswer(previous, true);
-    current.current = { ...current.current, [id]: value };
-    setStats(current.current); queue.set(id, value);
-    clearTimeout(timer.current); timer.current = setTimeout(() => void flush(), 1200);
+  const override = (id: string) => {
+    if (!queue.correctHeld(id)) queue.add({ id, ok: true });
+    drain();
   };
+  const unmaster = async (id: string) => apply(id, await unmasterCard(id));
   const forget = (ids: string[]) => {
     queue.forget(ids);
     const next = { ...current.current }; ids.forEach(id => delete next[id]);
@@ -43,7 +41,7 @@ export function useProgress(userId: string, initial: Stats) {
     };
     window.addEventListener('pagehide', persist);
     window.addEventListener('beforeunload', beforeUnload);
-    return () => { clearTimeout(timer.current); window.removeEventListener('pagehide', persist); window.removeEventListener('beforeunload', beforeUnload); void queue.flush(); };
+    return () => { window.removeEventListener('pagehide', persist); window.removeEventListener('beforeunload', beforeUnload); void queue.flush(); };
   }, [queue]);
-  return { stats, saveError, record, override, flush, forget };
+  return { stats, saveError, record, override, unmaster, flush, forget };
 }

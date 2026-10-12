@@ -18,12 +18,18 @@ function variants(ko: string) {
   const withoutParens = ko.replace(/\([^)]*\)/g, '');
   return [...new Set([ko, withoutParens, ...withoutParens.split(/[\/,=]/), ...Array.from(ko.matchAll(/\(([^)]*)\)/g), match => match[1])])].map(normalize).filter(Boolean);
 }
+const cardKey = (row: CardRow) => `${categoryOf(row)}|${normalize(row.fr)}|${normalize(row.ko)}`;
+// Progress is kept per card: rows merged into one card share the id of the first of them.
+export function cardIdsOf(rows: CardRow[]): Map<string, string> {
+  const first = new Map<string, string>();
+  return new Map(rows.map(row => { const key = cardKey(row); if (!first.has(key)) first.set(key, row.id); return [row.id, first.get(key)!]; }));
+}
 export function buildCards(rows: CardRow[]): Card[] {
   const seen = new Map<string, Card>();
   const cards: Card[] = [];
   for (const row of rows) {
     const cat = categoryOf(row);
-    const key = `${cat}|${normalize(row.fr)}|${normalize(row.ko)}`;
+    const key = cardKey(row);
     const duplicate = seen.get(key);
     // A word taught in several books stays one card that every one of those books can find.
     if (duplicate) { if (!duplicate.books.includes(row.book)) duplicate.books.push(row.book); continue; }
@@ -46,10 +52,11 @@ export function buildCards(rows: CardRow[]): Card[] {
   return cards;
 }
 export const isError = (progress?: Progress) => !!progress && progress.wrong > 0 && progress.streak < 2;
-export const cardPool = (cards: Card[], settings: Settings, stats: Stats) => cards.filter(card => settings.cats.includes(card.cat) && (!settings.errorsOnly || isError(stats[card.id])));
-export function recordAnswer(previous: Progress | undefined, ok: boolean): Progress {
-  return { right: (previous?.right ?? 0) + Number(ok), wrong: (previous?.wrong ?? 0) + Number(!ok), streak: ok ? (previous?.streak ?? 0) + 1 : 0, last: Date.now() };
-}
+export const MASTERY = 10;
+export const isMastered = (progress?: Progress) => !!progress?.masteredAt;
+export const scoreOf = (progress?: Progress) => isMastered(progress) ? MASTERY : Math.min(MASTERY, progress?.score ?? 0);
+// Mastered words leave the normal pools; « Réviser les appris » draws from them only.
+export const cardPool = (cards: Card[], settings: Settings, stats: Stats) => cards.filter(card => settings.cats.includes(card.cat) && isMastered(stats[card.id]) === settings.mastered && (!settings.errorsOnly || isError(stats[card.id])));
 // Korean → French: the answer is the French side, compared without accents or parenthesised clarifications.
 export const answerOf = (card: Card, direction: Direction) => direction === 'ko-fr' ? card.front : card.back;
 export const answerKey = (text: string, direction: Direction) => direction === 'ko-fr' ? searchText(normalize(text)) : normalize(text);

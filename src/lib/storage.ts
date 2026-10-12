@@ -32,12 +32,12 @@ function isScore(value: unknown): value is Score {
     nonNegative(value.seconds) && nonNegative(value.adjusted);
 }
 export function loadSettings(): Settings {
-  const fallback: Settings = { cats: ['vocab'], size: 20, mode: 'flash', direction: 'fr-ko', errorsOnly: false };
+  const fallback: Settings = { cats: ['vocab'], size: 20, mode: 'flash', direction: 'fr-ko', errorsOnly: false, mastered: false };
   try {
     const saved: unknown = JSON.parse(localStorage.getItem(prefsKey) ?? 'null');
     if (!isObject(saved)) return fallback;
     const cats = Array.isArray(saved.cats) ? saved.cats.filter(isCategory) : [];
-    return { cats: cats.length ? cats : fallback.cats, size: typeof saved.size === 'number' && SIZES.includes(saved.size) ? saved.size : 20, mode: saved.mode === 'type' || saved.mode === 'mcq' ? saved.mode : 'flash', direction: saved.direction === 'ko-fr' ? 'ko-fr' : 'fr-ko', errorsOnly: false };
+    return { cats: cats.length ? cats : fallback.cats, size: typeof saved.size === 'number' && SIZES.includes(saved.size) ? saved.size : 20, mode: saved.mode === 'type' || saved.mode === 'mcq' ? saved.mode : 'flash', direction: saved.direction === 'ko-fr' ? 'ko-fr' : 'fr-ko', errorsOnly: false, mastered: false };
   } catch { return fallback; }
 }
 export function loadGame(userId: string): Game {

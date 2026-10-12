@@ -1,4 +1,4 @@
-const INK = '#302d43', AMBER = '#ffc531', CORAL = '#ff8a5c', LEAF = '#62c07f', CREAM = '#fffaf0', VIOLET = '#9b82f3';
+const INK = '#383127', AMBER = '#ffc531', CORAL = '#ff8a5c', LEAF = '#62c07f', CREAM = '#fffaf0', SAND = '#e8c48c';
 const line = { stroke: INK, strokeWidth: 1.6, strokeLinejoin: 'round', strokeLinecap: 'round' } as const;
 const mark = { ...line, fill: 'none' } as const;
 
@@ -32,7 +32,7 @@ const art = {
     <path d="M12 4.8l.8 1.7 1.7.8-1.7.8-.8 1.7-.8-1.7-1.7-.8 1.7-.8z" fill={CREAM} {...line} strokeWidth={1} />
   </>,
   medal: <>
-    <path d="M7.4 2.2h4l2 6h-4z" fill={VIOLET} {...line} />
+    <path d="M7.4 2.2h4l2 6h-4z" fill={SAND} {...line} />
     <path d="M16.6 2.2h-4l-2 6h4z" fill={CORAL} {...line} />
     <circle cx="12" cy="15" r="6.6" fill={AMBER} {...line} />
     <path d="M10.8 13.4l1.6-1.2v5.8" {...mark} strokeWidth={1.5} />

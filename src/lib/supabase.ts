@@ -51,10 +51,10 @@ export async function loadStats(userId: string): Promise<Stats> {
   const stats: Stats = {};
   for (let offset = 0; ; offset += 1000) {
     const { data, error } = await supabase.from('user_progress')
-      .select('card_id, right_count, wrong_count, streak, last_seen')
+      .select('card_id, right_count, wrong_count, streak, last_seen, score, mastered_at')
       .eq('user_id', userId).order('card_id').range(offset, offset + 999);
     if (error) throw new Error(`Lecture de ta progression impossible : ${error.message}`);
-    data.forEach(row => { stats[row.card_id] = { right: row.right_count, wrong: row.wrong_count, streak: row.streak, last: Date.parse(row.last_seen) }; });
+    data.forEach(row => { stats[row.card_id] = toProgress(row); });
     if (data.length < 1000) return stats;
   }
 }
@@ -63,12 +63,24 @@ export async function isAdmin(userId: string): Promise<boolean> {
   if (error) return false;
   return data?.role === 'admin';
 }
-export async function saveProgress(userId: string, entries: [string, Progress][]) {
-  if (!entries.length) return;
-  const { error } = await supabase.from('user_progress').upsert(entries.map(([cardId, stat]) => ({
-    user_id: userId, card_id: cardId, right_count: stat.right, wrong_count: stat.wrong, streak: stat.streak, last_seen: new Date(stat.last).toISOString(),
-  })), { onConflict: 'user_id,card_id' });
+type ProgressRow = { right_count: number; wrong_count: number; streak: number; last_seen: string; score: number | null; mastered_at: string | null };
+const toProgress = (row: ProgressRow): Progress => ({ right: row.right_count, wrong: row.wrong_count, streak: row.streak, last: Date.parse(row.last_seen), score: row.score ?? 0, masteredAt: row.mastered_at ?? null });
+// Both functions return the up-to-date user_progress row, as a single row or a one-row set.
+function progressFrom(data: ProgressRow | ProgressRow[] | null): Progress {
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) throw new Error('Progression introuvable.');
+  return toProgress(row);
+}
+// The database applies the score rule: +1 per right answer, back to 0 on an error, mastered at 10.
+export async function sendAnswer(cardId: string, ok: boolean): Promise<Progress> {
+  const { data, error } = await supabase.rpc('record_answer', { p_card_id: cardId, p_ok: ok });
   if (error) throw error;
+  return progressFrom(data);
+}
+export async function unmasterCard(cardId: string): Promise<Progress> {
+  const { data, error } = await supabase.rpc('unmaster_card', { p_card_id: cardId });
+  if (error) throw error;
+  return progressFrom(data);
 }
 export async function deleteCards(ids: string[]): Promise<string[]> {
   if (!ids.length) return [];

@@ -4,7 +4,7 @@ import type { User } from '@supabase/supabase-js';
 import { Workspace } from '../Workspace';
 import type { CardRow, GrammarPoint } from '../types';
 
-const api = vi.hoisted(() => ({ loadGrammar: vi.fn(), saveProgress: vi.fn() }));
+const api = vi.hoisted(() => ({ loadGrammar: vi.fn(), sendAnswer: vi.fn(), unmasterCard: vi.fn() }));
 vi.mock('../lib/supabase', () => ({ ...api, supabase: { auth: {} }, errorMessage: (error: Error) => error.message }));
 vi.mock('../lib/sound', () => ({ playSound: vi.fn(), setMusic: vi.fn() }));
 const grammarRow = (id: string, ko: string, fr: string, book: string): CardRow => ({ id, category: 'grammar', word_type: null, ko, fr, book, lesson: null, short_form: null });

@@ -48,9 +48,9 @@ export interface Card {
   accepted: Set<string>;
   others: string[];
 }
-export interface Progress { right: number; wrong: number; streak: number; last: number }
+export interface Progress { right: number; wrong: number; streak: number; last: number; score?: number; masteredAt?: string | null }
 export type Stats = Record<string, Progress>;
-export interface Settings { cats: Category[]; size: number; mode: Mode; direction: Direction; errorsOnly: boolean }
+export interface Settings { cats: Category[]; size: number; mode: Mode; direction: Direction; errorsOnly: boolean; mastered: boolean }
 export interface Score {
   id: string;
   date: string;
@@ -68,4 +68,5 @@ export type AudioPrefs = Pick<Game, 'sound' | 'effects' | 'music' | 'track'>;
 export interface QuizRun { id: number; cards: Card[]; mode: Mode; timed: boolean; custom: boolean; direction?: Direction }
 export interface Answer { card: Card; ok: boolean; typed?: string }
 export interface QuizResult { run: QuizRun; answers: Answer[]; seconds: number; completed: boolean }
-export interface LibraryFilters { query: string; cat: Category | 'all'; book: BookFilter; level: LevelFilter; selected: Set<string> }
+export interface LibraryFilters { query: string; cat: Category | 'all'; book: BookFilter; level: LevelFilter; status: MasteryFilter; selected: Set<string> }
+export type MasteryFilter = 'all' | 'mastered' | 'learning';

@@ -4,7 +4,7 @@ import type { Session } from '@supabase/supabase-js';
 import App from './App';
 
 const auth = vi.hoisted(() => ({ getSession: vi.fn(), onAuthStateChange: vi.fn(), signInWithPassword: vi.fn(), signUp: vi.fn(), signInWithOAuth: vi.fn(), signOut: vi.fn() }));
-const api = vi.hoisted(() => ({ loadBooks: vi.fn(), loadCards: vi.fn(), loadStats: vi.fn(), isAdmin: vi.fn(), saveProgress: vi.fn(), deleteCards: vi.fn() }));
+const api = vi.hoisted(() => ({ loadBooks: vi.fn(), loadCards: vi.fn(), loadStats: vi.fn(), isAdmin: vi.fn(), sendAnswer: vi.fn(), unmasterCard: vi.fn(), deleteCards: vi.fn() }));
 vi.mock('./lib/supabase', () => ({ ...api, supabase: { auth }, errorMessage: (error: Error) => error.message }));
 vi.mock('./lib/sound', () => ({ playSound: vi.fn(), setMusic: vi.fn() }));
 vi.mock('./lib/appearance-api', () => ({ loadAppearance: vi.fn().mockResolvedValue({ ko_font: 'standard', theme: 'light' }), saveAppearance: vi.fn().mockResolvedValue(undefined) }));
@@ -18,7 +18,7 @@ beforeEach(() => {
   auth.signInWithOAuth.mockReset().mockResolvedValue({ error: null });
   api.loadBooks.mockReset().mockResolvedValue([]);
   api.loadCards.mockReset().mockResolvedValue([]); api.loadStats.mockReset().mockResolvedValue({}); api.isAdmin.mockReset().mockResolvedValue(false);
-  api.saveProgress.mockReset().mockResolvedValue(undefined);
+  api.sendAnswer.mockReset().mockResolvedValue({ right: 1, wrong: 0, streak: 1, last: 100, score: 1, masteredAt: null });
 });
 describe('authentication and account lifecycle', () => {
   it('logs a books loading failure without blocking the word list', async () => {

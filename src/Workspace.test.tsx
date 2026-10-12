@@ -7,7 +7,7 @@ import { setMusic } from './lib/sound';
 import { AppearanceProvider } from './components/AppearanceSettings';
 import type { CardRow } from './types';
 
-const api = vi.hoisted(() => ({ deleteCards: vi.fn(), saveProgress: vi.fn(), signOut: vi.fn() }));
+const api = vi.hoisted(() => ({ deleteCards: vi.fn(), sendAnswer: vi.fn(), unmasterCard: vi.fn(), signOut: vi.fn() }));
 vi.mock('./lib/supabase', () => ({ ...api, supabase: { auth: { signOut: api.signOut } }, errorMessage: (error: Error) => error.message }));
 vi.mock('./lib/sound', () => ({ playSound: vi.fn(), setMusic: vi.fn() }));
 const rows: CardRow[] = [
@@ -18,7 +18,7 @@ const rows: CardRow[] = [
 ];
 function setup(admin = true) { return render(<StrictMode><Workspace user={{ id: 'test-user', email: 'test@example.test' } as User} books={[]} initialRows={rows} initialStats={{}} admin={admin} /></StrictMode>); }
 function go(name: string) { fireEvent.click(within(screen.getByRole('navigation')).getByRole('button', { name })); }
-beforeEach(() => { api.deleteCards.mockReset().mockResolvedValue(['1', '4']); api.saveProgress.mockReset().mockResolvedValue(undefined); vi.spyOn(window, 'confirm').mockReturnValue(true); });
+beforeEach(() => { api.deleteCards.mockReset().mockResolvedValue(['1', '4']); api.sendAnswer.mockReset().mockResolvedValue({ right: 1, wrong: 0, streak: 1, last: 100, score: 1, masteredAt: null }); vi.spyOn(window, 'confirm').mockReturnValue(true); });
 describe('React workspace', () => {
   it('preserves selection across accent-insensitive searches and category filters', () => {
     setup(); go('Mes mots');
@@ -74,7 +74,7 @@ describe('React workspace', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Réglages' }));
     expect(window.confirm).not.toHaveBeenCalled(); expect(screen.queryByRole('timer')).toBeNull();
     fireEvent.click(screen.getByRole('switch', { name: 'Mode sombre' })); expect(document.documentElement.dataset.theme).toBe('dark');
-    at(64000); fireEvent.keyDown(document, { key: '1' }); expect(api.saveProgress).not.toHaveBeenCalled();
+    at(64000); fireEvent.keyDown(document, { key: '1' }); expect(api.sendAnswer).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Reprendre la série' }));
     expect(screen.getByText('1 / 2')).toBeDefined(); expect(document.querySelector('.choice:disabled')).toBeNull();
     act(() => vi.advanceTimersByTime(100)); expect(clocks()).toEqual(['0:03.0', '7 s']);
@@ -130,7 +130,7 @@ describe('React workspace', () => {
     await screen.findByText('Défi chrono terminé !');
     const game = JSON.parse(localStorage.getItem('haru:game:test-user')!);
     expect(game.xp).toBe(55); expect(game.scores).toHaveLength(1); expect(game.scores[0].custom).toBe(true);
-    await waitFor(() => expect(api.saveProgress).toHaveBeenCalled());
+    await waitFor(() => expect(api.sendAnswer).toHaveBeenCalled());
     fireEvent.click(screen.getByRole('button', { name: 'Voir mes records' }));
     fireEvent.change(screen.getByRole('combobox', { name: 'Séries' }), { target: { value: 'custom' } });
     expect(screen.getByText('Verbes · 1 mots')).toBeDefined();

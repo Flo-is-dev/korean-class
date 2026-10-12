@@ -5,7 +5,7 @@ import { Workspace } from './Workspace';
 import type { Book, CardRow } from './types';
 import { loadBookFilter, saveBookFilter } from './lib/storage';
 
-const api = vi.hoisted(() => ({ deleteCards: vi.fn(), saveProgress: vi.fn(), signOut: vi.fn() }));
+const api = vi.hoisted(() => ({ deleteCards: vi.fn(), sendAnswer: vi.fn(), unmasterCard: vi.fn(), signOut: vi.fn() }));
 vi.mock('./lib/supabase', () => ({ ...api, supabase: { auth: { signOut: api.signOut } }, errorMessage: (error: Error) => error.message }));
 vi.mock('./lib/sound', () => ({ playSound: vi.fn(), setMusic: vi.fn() }));
 const books: Book[] = [{ code: '초급2', label: 'Débutant 2' }, { code: '초급1', label: 'Débutant 1' }, { code: 'new', label: 'Nouveau livre' }];
@@ -21,7 +21,7 @@ function setup(catalogue: Book[] | null = books, cards = rows) {
   return view;
 }
 const choose = (name: string, value: string) => fireEvent.change(screen.getByRole('combobox', { name }), { target: { value } });
-beforeEach(() => { api.deleteCards.mockReset().mockResolvedValue(['4']); api.saveProgress.mockReset().mockResolvedValue(undefined); vi.spyOn(window, 'confirm').mockReturnValue(true); });
+beforeEach(() => { api.deleteCards.mockReset().mockResolvedValue(['4']); api.sendAnswer.mockReset().mockResolvedValue({ right: 1, wrong: 0, streak: 1, last: 100, score: 1, masteredAt: null }); vi.spyOn(window, 'confirm').mockReturnValue(true); });
 
 describe('dynamic book filter', () => {
   it('uses the supplied catalogue order and shows all counts including zero', () => {
